@@ -73,6 +73,11 @@ async function runDelete(options = {}) {
 function resumeDelete() {
   return tryResumeDelete({ onProgress: wireProgress() }).catch((error) => {
     if (error?.name === "NavigationResumeError") return;
+    // Storage/resume glitches on load should not flash errors in the popup.
+    if (/storage|pending/i.test(error?.message || "")) {
+      debugLog("warn", `resume skipped: ${error.message}`);
+      return;
+    }
     console.error("[ACC] resume", error);
     sendError(error);
   });

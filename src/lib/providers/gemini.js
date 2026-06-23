@@ -3,6 +3,7 @@ import {
   confirmDialogs,
   countGeminiSidebarChats,
   countMyActivityItems,
+  findGeminiSidebarChatLinks,
   findGeminiSidebarOverflowButtons,
   findMyActivityBulkDeleteDropdown,
   findMyActivityConfirmDelete,
@@ -55,20 +56,6 @@ function listChatIdsFromDom() {
     if (normalized) ids.add(normalized);
   }
   return [...ids];
-}
-
-async function listChatIds() {
-  const payloads = [100, 50, 25];
-  for (const size of payloads) {
-    try {
-      const data = await geminiBatchInPage("MaZiqc", [size]);
-      const fromApi = extractChatIdsFromBatch(data);
-      if (fromApi.length) return fromApi;
-    } catch {
-      /* try next payload */
-    }
-  }
-  return listChatIdsFromDom();
 }
 
 async function assertGeminiGone() {
@@ -131,21 +118,73 @@ async function deleteAllApi(onProgress, delayMs) {
   return result;
 }
 
+async function listChatIds() {
+  const withTimeout = (promise, ms = 12000) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini API timeout")), ms)),
+    ]);
+
+  const payloads = [100, 50, 25];
+  for (const size of payloads) {
+    try {
+      const data = await withTimeout(geminiBatchInPage("MaZiqc", [size]));
+      const fromApi = extractChatIdsFromBatch(data);
+      if (fromApi.length) return fromApi;
+    } catch {
+      /* try next payload */
+    }
+  }
+  return listChatIdsFromDom();
+}
+
+async function openSidebarOverflowForLink(link) {
+  const row =
+    link.closest('[role="listitem"]') ||
+    link.closest("li") ||
+    link.parentElement?.parentElement ||
+    link.parentElement;
+  for (const el of [row, link]) {
+    el?.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    el?.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  }
+  await sleep(250);
+
+  const inRow = row
+    ? [...row.querySelectorAll("button")].filter((b) => {
+        const aria = b.getAttribute("aria-label") || "";
+        return /(?:more|weitere)\s+options?\s+(?:for|für)\s+/i.test(aria);
+      })
+    : [];
+
+  if (inRow.length) return inRow[0];
+
+  const menus = findGeminiSidebarOverflowButtons();
+  return menus[0] ?? null;
+}
+
 async function deleteSidebarMenus(onProgress) {
   const estimated = Math.max(countGeminiSidebarChats(), listChatIdsFromDom().length, 1);
   let deleted = 0;
 
   for (let i = 0; i < 150; i++) {
-    const menus = findGeminiSidebarOverflowButtons();
-    if (!menus.length) break;
-    const menu = menus[0];
+    const links = findGeminiSidebarChatLinks();
+    if (!links.length) break;
 
     report(onProgress, {
       type: "status",
-      message: `Deleting chat ${deleted + 1} via menu…`,
+      message: `Deleting chat ${deleted + 1} via sidebar menu…`,
       overall: Math.min(10 + ((deleted + 1) / estimated) * 85, 95),
       current: 40,
     });
+
+    let menu = await openSidebarOverflowForLink(links[0]);
+    if (!menu) {
+      links[0].click();
+      await sleep(900);
+      menu = findGeminiSidebarOverflowButtons()[0] ?? null;
+    }
+    if (!menu) break;
 
     menu.click();
     await sleep(400);

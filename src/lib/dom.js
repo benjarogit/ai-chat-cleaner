@@ -196,7 +196,40 @@ export function findClaudeOverflowButtons(root = document) {
 }
 
 /** Gemini sidebar uses the same overflow aria pattern as Claude. */
-export const findGeminiSidebarOverflowButtons = findClaudeOverflowButtons;
+export function findGeminiSidebarScope(root = document) {
+  return (
+    root.querySelector('nav[aria-label*="Seitliche" i], nav[aria-label*="Sidebar" i]') ||
+    root.querySelector(
+      '[role="navigation"][aria-label*="Seitliche" i], [role="navigation"][aria-label*="Sidebar" i]'
+    ) ||
+    root
+  );
+}
+
+/** Overflow ⋮ in sidebar — include hover-hidden buttons (not only isVisible). */
+export function findGeminiSidebarOverflowButtons(root = document) {
+  const scope = findGeminiSidebarScope(root);
+  return [...scope.querySelectorAll("button")].filter((b) => {
+    const aria = b.getAttribute("aria-label") || "";
+    return CLAUDE_OVERFLOW_ARIA.test(aria);
+  });
+}
+
+export function findGeminiSidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  const scope = findGeminiSidebarScope(root);
+  for (const a of scope.querySelectorAll('a[href*="/app/"]')) {
+    const match = a.href.match(/\/app\/([a-zA-Z0-9_-]+)/);
+    if (!match || seen.has(match[1])) continue;
+    const raw = match[1];
+    if (/signout|options|search/i.test(raw)) continue;
+    if (!/^[a-z0-9_]{8,}$/i.test(raw)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
 
 /** Recents bulk mode: toolbar has cancel, or row checkboxes are visible. */
 export function isClaudeRecentsSelectMode() {
@@ -349,22 +382,7 @@ export function findMyActivityConfirmDelete() {
 }
 
 export function countGeminiSidebarChats(root = document) {
-  const ids = new Set();
-  const scope =
-    root.querySelector('nav[aria-label*="Seitliche" i], nav[aria-label*="Sidebar" i]') ||
-    root.querySelector(
-      '[role="navigation"][aria-label*="Seitliche" i], [role="navigation"][aria-label*="Sidebar" i]'
-    ) ||
-    root;
-  for (const a of scope.querySelectorAll('a[href*="/app/"]')) {
-    const match = a.href.match(/\/app\/([a-zA-Z0-9_-]+)/);
-    if (!match) continue;
-    const raw = match[1];
-    if (/signout|options|search/i.test(raw)) continue;
-    if (!/^[a-z0-9_]{8,}$/i.test(raw)) continue;
-    ids.add(raw.startsWith("c_") ? raw : `c_${raw}`);
-  }
-  return ids.size;
+  return findGeminiSidebarChatLinks(root).length;
 }
 
 /** Unique Claude/ChatGPT-style chat IDs from visible /chat/ links. */

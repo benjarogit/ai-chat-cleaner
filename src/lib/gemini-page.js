@@ -64,6 +64,6 @@ export function geminiBatchInPage(rpcid, payload) {
     setTimeout(() => {
       window.removeEventListener("acc-gemini-response", onResp);
       reject(new Error("Gemini page bridge timeout — reload tab"));
-    }, 30000);
+    }, 15000);
   });
 }

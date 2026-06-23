@@ -1,6 +1,6 @@
 import { ext } from "./api.js";
+import { pendingClear, pendingGet, pendingSet } from "./storage.js";
 
-const SESSION_KEY = "accPending";
 const PENDING_TTL_MS = 120_000;
 
 export class NavigationResumeError extends Error {
@@ -12,21 +12,18 @@ export class NavigationResumeError extends Error {
 }
 
 export async function setPending({ providerId, step, method, tabId, result }) {
-  await ext.storage.session.set({
-    [SESSION_KEY]: {
-      providerId,
-      step,
-      method,
-      tabId,
-      result,
-      at: Date.now(),
-    },
+  await pendingSet({
+    providerId,
+    step,
+    method,
+    tabId,
+    result,
+    at: Date.now(),
   });
 }
 
 export async function getPending(tabId) {
-  const data = await ext.storage.session.get(SESSION_KEY);
-  const pending = data[SESSION_KEY];
+  const pending = await pendingGet();
   if (!pending) return null;
   if (Date.now() - pending.at > PENDING_TTL_MS) {
     await clearPending();
@@ -39,7 +36,7 @@ export async function getPending(tabId) {
 }
 
 export async function clearPending() {
-  await ext.storage.session.remove(SESSION_KEY);
+  await pendingClear();
 }
 
 export async function navigateTo(url, pending) {
