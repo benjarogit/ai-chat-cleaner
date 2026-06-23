@@ -1,35 +1,62 @@
-import { detectProvider } from "./registry.js";
+import { detectProvider, providers } from "./registry.js";
+import { clearPending, getPending, getTabId, NavigationResumeError } from "./navigate.js";
 import { report } from "./shared.js";
+
+async function buildCtx(options) {
+  const tabId = await getTabId();
+  return {
+    url: options.url ?? location.href,
+    onProgress: options.onProgress,
+    delayMs: options.delayMs ?? 300,
+    fetchFn: options.fetchFn ?? fetch,
+    tabId,
+    step: options.step ?? null,
+  };
+}
+
+export async function tryResumeDelete(options = {}) {
+  const tabId = await getTabId();
+  const pending = await getPending(tabId);
+  if (!pending) return null;
+
+  const provider = providers.find((p) => p.id === pending.providerId);
+  if (!provider?.match(location.href)) return null;
+
+  await clearPending();
+  report(options.onProgress, {
+    type: "status",
+    message: `${provider.name}: resuming after navigation…`,
+    overall: 20,
+  });
+
+  return provider.deleteAll({
+    ...(await buildCtx(options)),
+    step: pending.step,
+    resumeMethod: pending.method,
+  });
+}
 
 /**
  * Delete all chats on the current supported AI site.
- * @param {object} options
- * @param {string} [options.url] - page URL (defaults to location.href in content script)
- * @param {(event: object) => void} [options.onProgress]
- * @param {number} [options.delayMs]
- * @param {typeof fetch} [options.fetchFn]
  */
-export async function deleteAllChats({
-  url = typeof location !== "undefined" ? location.href : "",
-  onProgress,
-  delayMs = 300,
-  fetchFn = fetch,
-} = {}) {
-  const provider = detectProvider(url);
+export async function deleteAllChats(options = {}) {
+  const ctx = await buildCtx(options);
+  const provider = detectProvider(ctx.url);
+
   if (!provider) {
     throw new Error(
       "Unsupported site. Open Claude, ChatGPT, Gemini, grok.com, or x.com/i/grok."
     );
   }
 
-  report(onProgress, {
+  report(ctx.onProgress, {
     type: "status",
     message: `${provider.name}: initializing…`,
     overall: 0,
   });
 
   try {
-    const result = await provider.deleteAll({ onProgress, delayMs, fetchFn, url });
+    const result = await provider.deleteAll(ctx);
 
     const deleted = result.deleted ?? 0;
     const total = result.total ?? deleted;
@@ -38,7 +65,7 @@ export async function deleteAllChats({
         ? `${provider.name}: all chats deleted (${result.method || "ok"}).`
         : `${provider.name}: deleted ${deleted} of ${total} (${result.method || "ok"}).`;
 
-    report(onProgress, {
+    report(ctx.onProgress, {
       type: "complete",
       message: msg,
       overall: 100,
@@ -50,7 +77,10 @@ export async function deleteAllChats({
 
     return { ...result, provider: provider.id };
   } catch (error) {
-    report(onProgress, { type: "error", message: error.message });
+    if (error instanceof NavigationResumeError) {
+      throw error;
+    }
+    report(ctx.onProgress, { type: "error", message: error.message });
     throw error;
   }
 }

@@ -1,4 +1,5 @@
-import { clickByText, confirmDialogs } from "../dom.js";
+import { clickKeywords, confirmDialogs, KW } from "../dom.js";
+import { navigateTo } from "../navigate.js";
 import { report, runDeleteLoop, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://chatgpt.com";
@@ -13,10 +14,14 @@ async function authHeaders(fetchFn) {
     throw new Error("ChatGPT session not found — log in first");
   }
 
-  return {
+  const headers = {
     Authorization: `Bearer ${session.accessToken}`,
     "Content-Type": "application/json",
   };
+  if (session.account?.id) {
+    headers["ChatGPT-Account-ID"] = session.account.id;
+  }
+  return headers;
 }
 
 async function listConversationIds(fetchFn) {
@@ -75,19 +80,23 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
   });
 }
 
-async function deleteAllDom() {
-  if (!location.pathname.includes("/settings") && !location.hash.includes("settings")) {
-    location.href = `${ORIGIN}/#settings/DataControls`;
-    await new Promise((r) => setTimeout(r, 2500));
+async function deleteAllDom(ctx) {
+  const onSettings =
+    location.hash.includes("settings") || location.pathname.includes("/settings");
+
+  if (!onSettings && ctx.step !== "settings-delete") {
+    await navigateTo(`${ORIGIN}/#settings/DataControls`, {
+      providerId: "chatgpt",
+      step: "settings-delete",
+      method: "dom-settings",
+      tabId: ctx.tabId,
+    });
   }
 
-  let clicked = await clickByText(["delete all chats", "clear all chats", "alle chats löschen"]);
-  if (!clicked) {
-    await clickByText(["data controls", "datenkontrollen"]);
-    clicked = await clickByText(["delete all chats", "clear all chats", "alle chats löschen"]);
-  }
+  await clickKeywords(KW.data, { timeout: 8000 });
+  const clicked = await clickKeywords(KW.deleteAll, { timeout: 12000 });
+  if (!clicked) throw new Error("ChatGPT delete-all control not found");
 
-  if (!clicked) throw new Error("Delete-all button not found in ChatGPT settings");
   await confirmDialogs();
   return { deleted: "all", total: "all" };
 }
@@ -107,11 +116,19 @@ export const chatgptProvider = {
   async deleteAll(ctx) {
     report(ctx.onProgress, { type: "status", message: "ChatGPT: starting…", overall: 5 });
 
+    if (ctx.step === "settings-delete") {
+      return { ...(await deleteAllDom(ctx)), method: "dom-settings", provider: "chatgpt" };
+    }
+
     const result = await tryMethods(
       [
-        { name: "api-bulk", fn: () => deleteAllBulk(ctx.fetchFn) },
-        { name: "api-individual", fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
-        { name: "dom-settings", fn: deleteAllDom },
+        { name: "api-bulk", step: null, fn: () => deleteAllBulk(ctx.fetchFn) },
+        {
+          name: "api-individual",
+          step: null,
+          fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+        },
+        { name: "dom-settings", step: "settings-delete", fn: () => deleteAllDom(ctx) },
       ],
       ctx
     );

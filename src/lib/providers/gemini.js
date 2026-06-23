@@ -1,4 +1,4 @@
-import { clickAllMatching, clickByText, confirmDialogs } from "../dom.js";
+import { clickEachTrash, clickKeywords, confirmDialogs, KW } from "../dom.js";
 import { report, runDeleteLoop, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://gemini.google.com";
@@ -12,6 +12,11 @@ function getWiz() {
     bl: wiz.cfb2h || "",
     sid: String(wiz.FdrFJe || ""),
   };
+}
+
+function normalizeGeminiId(id) {
+  if (!id) return null;
+  return id.startsWith("c_") ? id : `c_${id}`;
 }
 
 function parseBatchText(text) {
@@ -54,8 +59,9 @@ async function batchExecute(rpcid, payloadArray, fetchFn) {
 function extractChatIdsFromBatch(data) {
   const ids = new Set();
   const walk = (node) => {
-    if (typeof node === "string" && /^c_[a-zA-Z0-9_-]+$/.test(node)) {
-      ids.add(node);
+    if (typeof node === "string") {
+      if (/^c_[a-zA-Z0-9_-]+$/.test(node)) ids.add(node);
+      else if (/^[a-f0-9]{12,}$/i.test(node)) ids.add(`c_${node}`);
     } else if (Array.isArray(node)) {
       node.forEach(walk);
     } else if (node && typeof node === "object") {
@@ -63,8 +69,7 @@ function extractChatIdsFromBatch(data) {
     }
   };
   try {
-    const inner = JSON.parse(data?.[0]?.[2] || "[]");
-    walk(inner);
+    walk(JSON.parse(data?.[0]?.[2] || "[]"));
   } catch {
     walk(data);
   }
@@ -75,24 +80,36 @@ function listChatIdsFromDom() {
   const ids = new Set();
   for (const a of document.querySelectorAll('a[href*="/app/"]')) {
     const match = a.href.match(/\/app\/([a-zA-Z0-9_-]+)/);
-    if (match) ids.add(match[1]);
+    if (match) {
+      const normalized = normalizeGeminiId(match[1]);
+      if (normalized) ids.add(normalized);
+    }
   }
   return [...ids];
 }
 
 async function listChatIds(fetchFn) {
-  try {
-    const data = await batchExecute("MaZiqc", [50], fetchFn);
-    const fromApi = extractChatIdsFromBatch(data);
-    if (fromApi.length) return fromApi;
-  } catch {
-    /* fallback */
+  const payloads = [50, 100, 25];
+  for (const size of payloads) {
+    try {
+      const data = await batchExecute("MaZiqc", [size], fetchFn);
+      const fromApi = extractChatIdsFromBatch(data);
+      if (fromApi.length) return fromApi;
+    } catch {
+      /* try next payload */
+    }
   }
   return listChatIdsFromDom();
 }
 
 async function deleteChatId(cid, fetchFn) {
-  await batchExecute("GzXR5e", [cid], fetchFn);
+  const id = normalizeGeminiId(cid);
+  await batchExecute("GzXR5e", [id], fetchFn);
+  try {
+    await batchExecute("GzXR5e", [id, [1, null, 0, 1]], fetchFn);
+  } catch {
+    /* optional second RPC */
+  }
 }
 
 async function deleteAllApi(fetchFn, onProgress, delayMs) {
@@ -109,28 +126,18 @@ async function deleteAllApi(fetchFn, onProgress, delayMs) {
 }
 
 async function deleteAllDom() {
-  const menuClicked = await clickByText(["recent", "history", "verlauf", "chats"]);
-  if (menuClicked) await new Promise((r) => setTimeout(r, 800));
+  await clickKeywords(KW.history, { timeout: 8000 });
 
-  let deleted = await clickAllMatching(
-    ["delete", "löschen", "remove", "trash"],
-    { max: 150, delayMs: 450 }
-  );
-
+  let deleted = await clickEachTrash({ max: 150, delayMs: 500 });
   if (!deleted) {
-    const bulk = await clickByText([
-      "delete all",
-      "clear history",
-      "alle löschen",
-      "alle chats löschen",
-    ]);
+    const bulk = await clickKeywords(KW.deleteAll, { timeout: 5000 });
     if (bulk) {
       await confirmDialogs();
       return { deleted: "all", total: "all" };
     }
-    throw new Error("No Gemini delete controls found");
   }
 
+  if (!deleted) throw new Error("No Gemini delete controls found");
   await confirmDialogs();
   return { deleted, total: deleted };
 }
@@ -151,8 +158,12 @@ export const geminiProvider = {
 
     const result = await tryMethods(
       [
-        { name: "api-batchexecute", fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
-        { name: "dom-sidebar", fn: deleteAllDom },
+        {
+          name: "api-batchexecute",
+          step: null,
+          fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+        },
+        { name: "dom-sidebar", step: "dom-sidebar", fn: deleteAllDom },
       ],
       ctx
     );

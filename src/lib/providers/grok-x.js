@@ -1,15 +1,16 @@
-import { clickByText, confirmDialogs } from "../dom.js";
+import {
+  clickEachMoreDelete,
+  clickEachTrash,
+  clickKeywords,
+  confirmDialogs,
+  KW,
+} from "../dom.js";
+import { navigateTo } from "../navigate.js";
 import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 
 const BEARER =
   "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 const HISTORY_HASH = "9Hyh5D4-WXLnExZkONSkZg";
-const DELETE_OPS = [
-  "GrokConversationDelete",
-  "DeleteGrokConversation",
-  "GrokDeleteConversation",
-  "GrokConversationRemove",
-];
 
 const FEATURES = {
   responsive_web_graphql_timeline_navigation_enabled: true,
@@ -48,6 +49,38 @@ async function gqlGet(hash, operationName, variables, fetchFn) {
   return response.json();
 }
 
+async function findDeleteQueryId() {
+  const names = [
+    "GrokConversationDelete",
+    "DeleteGrokConversation",
+    "GrokDeleteConversation",
+    "GrokConversationRemove",
+  ];
+
+  for (const entry of performance.getEntriesByType("resource")) {
+    for (const name of names) {
+      if (!entry.name.includes(name)) continue;
+      const match = entry.name.match(/graphql\/([^/]+)\//);
+      if (match) return { hash: match[1], operationName: name };
+    }
+  }
+
+  const scripts = document.querySelectorAll('script[src*="main"]');
+  for (const script of scripts) {
+    if (!script.src) continue;
+    try {
+      const text = await fetch(script.src).then((r) => r.text());
+      for (const name of names) {
+        const match = text.match(new RegExp(`queryId:"([^"]+)",operationName:"${name}"`));
+        if (match) return { hash: match[1], operationName: name };
+      }
+    } catch {
+      /* continue */
+    }
+  }
+  return null;
+}
+
 async function gqlPost(hash, operationName, variables, fetchFn) {
   const url = `https://x.com/i/api/graphql/${hash}/${operationName}`;
   const response = await fetchFn(url, {
@@ -58,31 +91,6 @@ async function gqlPost(hash, operationName, variables, fetchFn) {
   });
   if (!response.ok) throw new Error(`${operationName} HTTP ${response.status}`);
   return response.json();
-}
-
-async function findQueryId(operationName) {
-  for (const entry of performance.getEntriesByType("resource")) {
-    const match = entry.name.match(
-      new RegExp(`/graphql/([^/]+)/${operationName}`)
-    );
-    if (match) return match[1];
-  }
-
-  const scripts = document.querySelectorAll('script[src*="main"], link[as="script"][href*="main"]');
-  for (const el of scripts) {
-    const src = el.src || el.href;
-    if (!src) continue;
-    try {
-      const text = await fetch(src).then((r) => r.text());
-      const match = text.match(
-        new RegExp(`queryId:"([^"]+)",operationName:"${operationName}"`)
-      );
-      if (match) return match[1];
-    } catch {
-      /* continue */
-    }
-  }
-  return null;
 }
 
 async function listGrokConversationIds(fetchFn) {
@@ -109,26 +117,10 @@ async function listGrokConversationIds(fetchFn) {
   return all;
 }
 
-async function deleteGrokConversationId(id, fetchFn) {
-  for (const op of DELETE_OPS) {
-    const hash = await findQueryId(op);
-    if (!hash) continue;
-    try {
-      await gqlPost(hash, op, { restId: id, conversationId: id }, fetchFn);
-      return;
-    } catch {
-      try {
-        await gqlPost(hash, op, { rest_id: id }, fetchFn);
-        return;
-      } catch {
-        /* try next op */
-      }
-    }
-  }
-  throw new Error(`No delete API for conversation ${id}`);
-}
+async function deleteAllViaGraphql(fetchFn, onProgress, delayMs) {
+  const op = await findDeleteQueryId();
+  if (!op) throw new Error("Grok delete GraphQL operation not found in page bundles");
 
-async function deleteAllApi(fetchFn, onProgress, delayMs) {
   const ids = await listGrokConversationIds(fetchFn);
   if (!ids.length) return { deleted: 0, total: 0 };
 
@@ -137,57 +129,62 @@ async function deleteAllApi(fetchFn, onProgress, delayMs) {
     delayMs,
     label: "Grok chat",
     onProgress,
-    deleteOne: (id) => deleteGrokConversationId(id, fetchFn),
+    deleteOne: async (id) => {
+      const payloads = [{ restId: id }, { rest_id: id }, { conversationId: id }];
+      let lastErr;
+      for (const variables of payloads) {
+        try {
+          await gqlPost(op.hash, op.operationName, variables, fetchFn);
+          return;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr;
+    },
   });
 }
 
-async function deleteAllSettingsDom() {
-  if (!location.pathname.includes("/settings")) {
-    location.href = "https://x.com/settings/privacy_and_safety";
+async function openHistoryPanel() {
+  if (!location.pathname.startsWith("/i/grok")) {
+    location.assign("https://x.com/i/grok");
     await sleep(2500);
   }
 
-  await clickByText(["grok", "third-party", "third party"]);
-  const bulk = await clickByText([
-    "delete conversation history",
-    "delete all conversation",
-    "conversation history löschen",
-    "verlauf löschen",
-  ]);
+  const opened = await clickKeywords(KW.history, { timeout: 8000 });
+  if (!opened) throw new Error("Grok history panel not found (Chatverlauf / Verlauf)");
+  await sleep(700);
+}
 
+async function deleteAllSettingsDom(ctx) {
+  const onGrokSettings =
+    location.pathname.includes("/settings") && location.href.toLowerCase().includes("grok");
+
+  if (!onGrokSettings && ctx.step !== "settings-delete") {
+    await navigateTo("https://x.com/settings/privacy_and_safety", {
+      providerId: "grok-x",
+      step: "settings-delete",
+      method: "dom-settings",
+      tabId: ctx.tabId,
+    });
+  }
+
+  await clickKeywords([...KW.grok, ...KW.data], { timeout: 12000 });
+  const bulk = await clickKeywords(KW.deleteAll, { timeout: 12000 });
   if (!bulk) throw new Error("X Grok bulk-delete button not found in settings");
 
-  await confirmDialogs();
   await confirmDialogs();
   return { deleted: "all", total: "all" };
 }
 
 async function deleteHistoryDom() {
-  if (!location.pathname.startsWith("/i/grok")) {
-    location.href = "https://x.com/i/grok";
-    await sleep(2500);
-  }
+  await openHistoryPanel();
 
-  await clickByText(["history", "verlauf"]);
-  await sleep(800);
-
-  let deleted = 0;
-  for (let i = 0; i < 100; i++) {
-    let clicked = await clickByText(["delete"], { timeout: 1500 });
-    if (!clicked) {
-      const btn = document.querySelector('button[aria-label*="Delete"], button[aria-label*="delete"]');
-      if (btn) {
-        btn.click();
-        clicked = true;
-      }
-    }
-    if (!clicked) break;
-    await confirmDialogs();
-    deleted++;
-    await sleep(400);
-  }
-
+  let deleted = await clickEachMoreDelete({ max: 120, delayMs: 450 });
+  if (!deleted) deleted = await clickEachTrash({ max: 100, delayMs: 500 });
   if (!deleted) throw new Error("No deletable Grok items in X history UI");
+
+  await confirmDialogs();
   return { deleted, total: deleted };
 }
 
@@ -211,11 +208,19 @@ export const grokXProvider = {
   async deleteAll(ctx) {
     report(ctx.onProgress, { type: "status", message: "Grok on X: starting…", overall: 5 });
 
+    if (ctx.step === "settings-delete") {
+      return { ...(await deleteAllSettingsDom(ctx)), method: "dom-settings", provider: "grok-x" };
+    }
+
     const result = await tryMethods(
       [
-        { name: "api-graphql-bulk-settings", fn: deleteAllSettingsDom },
-        { name: "api-graphql-individual", fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
-        { name: "dom-history", fn: deleteHistoryDom },
+        {
+          name: "api-graphql-individual",
+          step: null,
+          fn: () => deleteAllViaGraphql(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+        },
+        { name: "dom-history", step: "dom-history", fn: deleteHistoryDom },
+        { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
       ],
       ctx
     );

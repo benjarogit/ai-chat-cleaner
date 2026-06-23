@@ -1,4 +1,5 @@
-import { report, runDeleteLoop, sleep } from "../shared.js";
+import { clickEachTrash, clickKeywords, confirmDialogs, KW } from "../dom.js";
+import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://claude.ai";
 
@@ -23,6 +24,38 @@ async function getChatIds(orgId, fetchFn) {
   return data.map((c) => c.uuid);
 }
 
+async function deleteAllApi(fetchFn, onProgress, delayMs) {
+  const orgId = await getOrganizationId(fetchFn);
+  const chatIds = await getChatIds(orgId, fetchFn);
+  if (!chatIds.length) return { deleted: 0, total: 0 };
+
+  return runDeleteLoop({
+    ids: chatIds,
+    delayMs,
+    label: "chat",
+    onProgress,
+    deleteOne: async (chatId) => {
+      const response = await fetchFn(
+        `${ORIGIN}/api/organizations/${orgId}/chat_conversations/${chatId}`,
+        { method: "DELETE", credentials: "include", headers: { Accept: "application/json" } }
+      );
+      if (!response.ok) throw new Error(`delete ${chatId} HTTP ${response.status}`);
+    },
+  });
+}
+
+async function deleteAllDom() {
+  await clickKeywords(KW.history, { timeout: 5000 });
+  await sleep(600);
+
+  let deleted = await clickEachTrash({ max: 200, delayMs: 400 });
+  if (!deleted) {
+    deleted = await clickEachTrash({ max: 50, delayMs: 500 });
+  }
+  if (!deleted) throw new Error("No Claude delete controls in sidebar");
+  return { deleted, total: deleted };
+}
+
 export const claudeProvider = {
   id: "claude",
   name: "Claude",
@@ -34,31 +67,17 @@ export const claudeProvider = {
     }
   },
 
-  async deleteAll({ onProgress, delayMs, fetchFn = fetch }) {
-    report(onProgress, { type: "status", message: "Claude: fetching chats…", overall: 5 });
+  async deleteAll(ctx) {
+    report(ctx.onProgress, { type: "status", message: "Claude: starting…", overall: 5 });
 
-    const orgId = await getOrganizationId(fetchFn);
-    const chatIds = await getChatIds(orgId, fetchFn);
+    const result = await tryMethods(
+      [
+        { name: "api", step: null, fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
+        { name: "dom-sidebar", step: "dom-sidebar", fn: deleteAllDom },
+      ],
+      ctx
+    );
 
-    if (chatIds.length === 0) {
-      return { deleted: 0, total: 0, provider: "claude" };
-    }
-
-    const result = await runDeleteLoop({
-      ids: chatIds,
-      delayMs,
-      label: "chat",
-      onProgress,
-      deleteOne: async (chatId) => {
-        const response = await fetchFn(
-          `${ORIGIN}/api/organizations/${orgId}/chat_conversations/${chatId}`,
-          { method: "DELETE", credentials: "include", headers: { Accept: "application/json" } }
-        );
-        if (!response.ok) throw new Error(`delete ${chatId} HTTP ${response.status}`);
-        if (delayMs > 0) await sleep(0);
-      },
-    });
-
-    return { ...result, provider: "claude", method: "api" };
+    return { ...result, provider: "claude" };
   },
 };

@@ -8,13 +8,22 @@ export function report(onProgress, payload) {
 
 export async function tryMethods(methods, ctx) {
   const errors = [];
-  for (const { name, fn } of methods) {
+  const startAt = ctx.step ?? null;
+
+  for (const { name, fn, step } of methods) {
+    if (startAt && step !== startAt) continue;
+
     try {
       const result = await fn(ctx);
       return { ...result, method: name };
     } catch (error) {
+      if (error.name === "NavigationResumeError") throw error;
       errors.push(`${name}: ${error.message}`);
     }
+  }
+
+  if (startAt) {
+    throw new Error(`Resume step "${startAt}" failed`);
   }
   throw new Error(errors.join(" | "));
 }
