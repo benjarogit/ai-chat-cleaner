@@ -1,23 +1,26 @@
 /**
- * Standalone script for DevTools console on https://claude.ai
+ * Standalone console script — run on a supported AI chat tab.
  */
-import { deleteAllChats, isClaudeUrl } from "./lib/deleter.js";
+import { deleteAllChats, detectProvider, isSupportedUrl } from "./lib/deleter.js";
 
 async function runConsoleCleaner() {
-  if (!isClaudeUrl(location.href)) {
-    console.error("[ACC] Open https://claude.ai and run again.");
+  if (!isSupportedUrl(location.href)) {
+    console.error(
+      "[ACC] Unsupported site. Open Claude, ChatGPT, Gemini, grok.com, or x.com/i/grok."
+    );
     return;
   }
 
+  const provider = detectProvider(location.href);
   const confirmed = confirm(
-    "Delete ALL Claude conversations?\n\nThis cannot be undone."
+    `Delete ALL ${provider.name} conversations?\n\nThis cannot be undone.`
   );
   if (!confirmed) {
     console.log("[ACC] Cancelled.");
     return;
   }
 
-  console.log("[ACC] Starting…");
+  console.log(`[ACC] Starting on ${provider.name}…`);
 
   try {
     const result = await deleteAllChats({
@@ -31,7 +34,7 @@ async function runConsoleCleaner() {
         }
       },
     });
-    console.log(`[ACC] Done. Deleted ${result.deleted} chat(s).`);
+    console.log(`[ACC] Done.`, result);
   } catch (error) {
     console.error("[ACC] Failed:", error.message);
   }

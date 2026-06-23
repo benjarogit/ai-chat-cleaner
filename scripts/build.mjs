@@ -117,7 +117,7 @@ async function buildConsole() {
     join(dist, "CONSOLE-README.txt"),
     [
       "AI Chat Cleaner — console script (no extension)",
-      "1. Log in at https://claude.ai",
+      "Supported: claude.ai, chatgpt.com, gemini.google.com, grok.com, x.com/i/grok",
       "2. Open DevTools → Console",
       "3. Paste acc-console.js and press Enter",
       "",

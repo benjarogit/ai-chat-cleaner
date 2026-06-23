@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "AI Chat Cleaner",
   "short_name": "ACC",
-  "version": "1.1.1",
-  "description": "Bulk-delete all conversations on claude.ai",
+  "version": "1.2.0",
+  "description": "Bulk-delete chats on Claude, ChatGPT, Gemini, Grok & Grok on X",
   "author": "Sunny C.",
   "homepage_url": "https://sunnyc.de",
   "icons": {
@@ -23,10 +23,24 @@
     "service_worker": "background.js"
   },
   "permissions": ["alarms"],
-  "host_permissions": ["https://claude.ai/*"],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://grok.com/*",
+    "https://x.com/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*"],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://grok.com/*",
+        "https://x.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

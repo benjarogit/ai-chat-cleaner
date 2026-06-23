@@ -2,69 +2,43 @@
 
 [English](README.md) · [Sunny C.](https://sunnyc.de)
 
-Alle Unterhaltungen auf [claude.ai](https://claude.ai) gesammelt löschen.
+Alle Chats auf unterstützten KI-Seiten gesammelt löschen.
 
-Fork von [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), weiterentwickelt von **Sunny C.** — [sunnyc.de](https://sunnyc.de)
+| Seite | URL |
+|-------|-----|
+| Claude | [claude.ai](https://claude.ai) |
+| ChatGPT | [chatgpt.com](https://chatgpt.com) |
+| Gemini | [gemini.google.com](https://gemini.google.com) |
+| Grok | [grok.com](https://grok.com) |
+| Grok auf X | [x.com/i/grok](https://x.com/i/grok) |
+
+Fork von [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), weiterentwickelt von **Sunny C.**
+
+## Funktionsweise
+
+Pro Plattform: **API zuerst**, dann **DOM-Fallbacks**:
+
+| Plattform | Primär | Fallback |
+|-----------|--------|----------|
+| Claude | REST API | — |
+| ChatGPT | Bulk-`PATCH /backend-api/conversations` | Einstellungen → Alle Chats löschen |
+| Gemini | `batchexecute` RPC | Sidebar-Löschen |
+| Grok.com | Einstellungen „Alle löschen“ | Einzelne History-Einträge |
+| Grok auf X | Einstellungen Bulk-Löschen | GraphQL + History-UI |
 
 ## Downloads
 
-[GitHub Releases](https://github.com/benjarogit/claudedeleter/releases):
+[GitHub Releases](https://github.com/benjarogit/claudedeleter/releases) — `acc-firefox.zip`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`
 
-| Datei | Ziel |
-|-------|------|
-| `acc-firefox.zip` / `.xpi` | Firefox Desktop + **Firefox für Android** |
-| `acc-chrome.zip` | Chrome Desktop |
-| `acc-edge.zip` | Edge Desktop |
-| `acc-console.js` | Beliebiger Browser (ohne Erweiterung) |
+## Bedienung
 
-## Mobile Unterstützung
+1. Unterstützte Seite öffnen (eingeloggt).
+2. ACC → **Delete all chats** → bestätigen.
+3. Tab offen lassen bis fertig (DOM-Fallbacks können zu Einstellungen navigieren).
 
-| Plattform | Erweiterungen |
-|-----------|---------------|
-| **Firefox für Android** | Ja (nach AMO-Installation) |
-| Chrome Android | Nein (Google-Richtlinie) |
-| Edge mobil | Nein |
-| Safari iOS | Nein |
+## Mozilla AMO
 
-Details: `MOBILE-README.txt` im Release.
-
-## Mozilla AMO — was hochladen?
-
-**`acc-firefox.zip`** wählen (`.xpi` ist identisch).
-
-Bei „Mit welchen Anwendungen kompatibel?“ **Firefox** und **Firefox für Android** ankreuzen.
-
-Der AMO-Fehler mit `service_worker` ist behoben: Firefox-Manifest enthält jetzt `background.scripts` als Fallback.
-
-Seit Nov 2025 verlangt AMO `browser_specific_settings.gecko.data_collection_permissions`. ACC setzt `required: ["none"]` (keine Datenübertragung an den Entwickler).
-
-Neue Add-on-ID: `aichatcleaner@sunnyc.de` (neuer Upload, nicht die alte `claude-deleter@…`-ID).
-
-Quellcode bei AMO angeben: GitHub-Repo + `npm ci && npm run build`.
-
-## Ein-Klick-Installation
-
-Für Endnutzer nur über offizielle Stores (AMO, Chrome Web Store, Edge Add-ons). GitHub liefert ZIP/XPI für manuelle Installation und Store-Einreichung.
-
-## Manuelle Installation
-
-### Firefox (Desktop & Android)
-
-**Nach AMO-Freigabe:** von addons.mozilla.org installieren.
-
-**Temporär (Desktop):** `about:debugging` → Temporäres Add-on laden → `manifest.json` aus entpacktem `acc-firefox.zip`.
-
-**Android:** Nach AMO-Install in Firefox für Android `claude.ai` öffnen → Menü → Erweiterungen → ACC.
-
-### Chrome / Edge
-
-1. `acc-chrome.zip` oder `acc-edge.zip` entpacken
-2. `chrome://extensions` bzw. `edge://extensions` → Entwicklermodus → Entpackte Erweiterung laden
-
-### Konsole (ohne Erweiterung)
-
-1. Auf claude.ai einloggen
-2. Entwicklertools → Konsole → `acc-console.js` einfügen → Enter
+**`acc-firefox.zip`** hochladen. Firefox + Firefox für Android ankreuzen. ID: `aichatcleaner@sunnyc.de`.
 
 ## Build
 

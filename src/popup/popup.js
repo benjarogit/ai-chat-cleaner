@@ -1,5 +1,5 @@
-import { isClaudeUrl } from "../lib/deleter.js";
-import { ext, getActiveClaudeTab, onRuntimeMessage, sendTabMessage } from "../lib/api.js";
+import { deleteAllChats, detectProvider, isSupportedUrl, supportedSitesLabel } from "../lib/deleter.js";
+import { ext, getActiveTab, onRuntimeMessage, sendTabMessage } from "../lib/api.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -42,23 +42,24 @@ function resetProgress() {
 }
 
 async function init() {
-  const tab = await getActiveClaudeTab();
-  if (!tab?.url || !isClaudeUrl(tab.url)) {
+  const tab = await getActiveTab();
+  const provider = tab?.url ? detectProvider(tab.url) : null;
+
+  if (!tab?.url || !isSupportedUrl(tab.url)) {
     deleteButton.disabled = true;
-    status.textContent = "Open claude.ai in this tab first.";
-    addLog("Not on claude.ai — extension disabled.");
+    status.textContent = `Open a supported site: ${supportedSitesLabel()}.`;
+    addLog("Unsupported tab.");
     return;
   }
 
   deleteButton.disabled = false;
-  status.textContent = "Ready on claude.ai.";
-  addLog("Ready.");
+  status.textContent = `Ready on ${provider.name}.`;
+  addLog(`Ready (${provider.id}).`);
 }
 
 deleteButton.addEventListener("click", () => {
   mainPage.hidden = true;
   confirmPage.hidden = false;
-  addLog("Confirmation shown.");
 });
 
 confirmNo.addEventListener("click", () => {
@@ -77,7 +78,7 @@ confirmYes.addEventListener("click", async () => {
   status.textContent = "Starting…";
   addLog("Deletion started.");
 
-  const tab = await getActiveClaudeTab();
+  const tab = await getActiveTab();
   if (!tab?.id) {
     setError("No active tab.");
     deleteButton.disabled = false;
@@ -87,7 +88,7 @@ confirmYes.addEventListener("click", async () => {
   try {
     await sendTabMessage(tab.id, { action: "deleteAll" });
   } catch (err) {
-    setError(`Could not reach page script: ${err.message}. Reload claude.ai and try again.`);
+    setError(`Page script unreachable: ${err.message}. Reload the tab and try again.`);
     deleteButton.disabled = false;
     addLog(`Error: ${err.message}`);
   }

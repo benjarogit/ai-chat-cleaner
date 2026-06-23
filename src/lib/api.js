@@ -12,7 +12,7 @@ export function onRuntimeMessage(listener) {
   ext.runtime.onMessage.addListener(listener);
 }
 
-export async function getActiveClaudeTab() {
+export async function getActiveTab() {
   const tabs = await ext.tabs.query({ active: true, currentWindow: true });
   return tabs[0] ?? null;
 }
