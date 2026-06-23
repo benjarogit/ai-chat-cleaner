@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude Deleter</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>Claude Deleter</h1>
+    <p class="subtitle">Bulk-delete all claude.ai conversations</p>
+  </header>
+
+  <main id="mainPage">
+    <p id="status" class="status">Open claude.ai to use this extension.</p>
+    <button id="deleteAll" type="button" disabled>Delete all chats</button>
+    <div class="progress-block" hidden>
+      <label>Overall <span id="overallProgressText">0%</span></label>
+      <div class="progress-bar"><div id="overallProgress"></div></div>
+      <label>Current chat <span id="currentProgressText">0%</span></label>
+      <div class="progress-bar"><div id="currentProgress"></div></div>
+    </div>
+    <p id="error" class="error" hidden></p>
+    <div id="log" class="log" aria-live="polite"></div>
+  </main>
+
+  <section id="confirmPage" hidden>
+    <h2>Confirm deletion</h2>
+    <p>Delete <strong>all</strong> conversations? This cannot be undone.</p>
+    <div class="actions">
+      <button id="confirmYes" type="button" class="danger">Yes, delete all</button>
+      <button id="confirmNo" type="button" class="secondary">Cancel</button>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/benjarogit/claudedeleter" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
