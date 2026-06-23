@@ -67,7 +67,7 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 | Platform | Primary | Fallback |
 |----------|---------|----------|
 | Claude | REST API (`DELETE` per chat) | Sidebar trash |
-| ChatGPT | `PATCH /backend-api/conversation/{id}` per chat | Settings UI |
+| ChatGPT | Datenkontrollen → **Alle löschen** (bulk) | Per-chat API → Sidebar ⋮ |
 | Gemini | `batchexecute` RPC (page context) | Sidebar delete |
 | Grok.com | `DELETE /rest/app-chat/conversations` | History UI (Mehr → Löschen) |
 | Grok on X | GraphQL delete (when op found in page) | Chatverlauf → Mehr → Delete |

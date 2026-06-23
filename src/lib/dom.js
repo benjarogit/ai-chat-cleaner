@@ -8,7 +8,7 @@ export const KW = {
   ],
   deleteAll: [
     "delete all", "clear all", "remove all", "alle löschen", "alle unterhaltungen",
-    "alle chats", "gesamten verlauf", "conversation history", "delete conversation history",
+    "alle chats", "alle chats löschen", "gesamten verlauf", "conversation history", "delete conversation history",
     "delete all conversations", "delete all chats", "clear history", "verlauf löschen",
     "unterhaltungen löschen", "chats löschen", "delete all chats and conversations",
   ],
@@ -27,7 +27,10 @@ export const KW = {
     "data controls", "data control", "datenkontrolle", "daten", "privacy", "datenschutz",
     "privacy and safety", "privacy & safety",
   ],
-  more: ["mehr", "more", "more actions", "weitere", "options", "aktionen"],
+  more: [
+    "mehr", "more", "more actions", "weitere", "options", "aktionen",
+    "conversation options", "open conversation", "chat options",
+  ],
   grok: ["grok", "third-party", "third party", "collaborators"],
   selectChats: ["chats auswählen", "select chats"],
   selectAll: ["alles auswählen", "select all"],

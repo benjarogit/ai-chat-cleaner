@@ -1,15 +1,18 @@
 :root {
   color-scheme: dark;
-  --bg: #141414;
-  --surface: #1f1f1f;
-  --border: #333;
-  --text: #f2f2f2;
-  --muted: #a3a3a3;
-  --accent: #d97757;
-  --accent-hover: #c4684a;
-  --danger: #dc3545;
-  --danger-hover: #bb2d3b;
-  --ok: #3d9a6f;
+  /* Palette from assets/acc-logo.png */
+  --bg: #1b2637;
+  --surface: #1d3349;
+  --border: #275162;
+  --text: #e8efe6;
+  --muted: #9ab0b8;
+  --accent: #c27d59;
+  --accent-hover: #a96848;
+  --teal: #49a6b2;
+  --blue: #406996;
+  --danger: #c44d5a;
+  --danger-hover: #a33d48;
+  --ok: #49a6b2;
 }
 
 * {
@@ -25,13 +28,30 @@ body {
   color: var(--text);
 }
 
+header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+header img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.header-text {
+  min-width: 0;
+}
+
 header h1 {
   margin: 0 0 4px;
   font-size: 18px;
 }
 
 .subtitle {
-  margin: 0 0 16px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -42,14 +62,14 @@ header h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--accent);
+  color: var(--teal);
 }
 
 .error {
   margin: 12px 0 0;
   padding: 10px 12px;
-  background: #3a1f24;
-  border: 1px solid #7a2f3a;
+  background: #3a2228;
+  border: 1px solid var(--danger);
   border-radius: 8px;
   color: #ffb4b4;
 }
@@ -111,12 +131,13 @@ button.secondary {
   background: var(--surface);
   border-radius: 999px;
   overflow: hidden;
+  border: 1px solid var(--border);
 }
 
 .progress-bar > div {
   height: 100%;
   width: 0;
-  background: var(--ok);
+  background: linear-gradient(90deg, var(--blue), var(--ok));
   transition: width 0.25s ease;
 }
 
@@ -152,11 +173,12 @@ footer {
 }
 
 footer a {
-  color: #6eb5ff;
+  color: var(--teal);
   font-size: 12px;
   text-decoration: none;
 }
 
 footer a:hover {
+  color: var(--accent);
   text-decoration: underline;
 }

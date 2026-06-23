@@ -76,6 +76,15 @@ export async function deleteAllChats(options = {}) {
       method: result.method,
     });
 
+    // Sync stale sidebars/history UIs after successful delete
+    setTimeout(() => {
+      try {
+        location.reload();
+      } catch {
+        /* tab may have closed */
+      }
+    }, 600);
+
     return { ...result, provider: provider.id };
   } catch (error) {
     if (error instanceof NavigationResumeError) {
