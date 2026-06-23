@@ -11,13 +11,14 @@ export class NavigationResumeError extends Error {
   }
 }
 
-export async function setPending({ providerId, step, method, tabId }) {
+export async function setPending({ providerId, step, method, tabId, result }) {
   await ext.storage.session.set({
     [SESSION_KEY]: {
       providerId,
       step,
       method,
       tabId,
+      result,
       at: Date.now(),
     },
   });

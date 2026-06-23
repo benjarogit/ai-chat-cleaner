@@ -1,10 +1,9 @@
 import {
-  clickKeywords,
-  clickVisibleExactText,
   confirmDialogs,
-  findByKeywords,
-  queryVisible,
-  KW,
+  countChatGptNavChats,
+  findChatGptConversationOptionsButton,
+  findChatGptSettingsBulkDelete,
+  findOpenMenuDeleteItem,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
 import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
@@ -32,7 +31,7 @@ async function authHeaders(fetchFn) {
   return headers;
 }
 
-/** Live-verified: paginate with limit=100 (113 total on test account). */
+/** Paginate with limit=100 — language-neutral API. */
 async function listConversationIds(fetchFn) {
   const headers = await authHeaders(fetchFn);
   const ids = [];
@@ -58,62 +57,24 @@ async function listConversationIds(fetchFn) {
   return ids;
 }
 
-/** Live-verified: nav links only (sidebar virtualizes; 56 visible vs 113 API). */
-function countNavChats() {
-  const ids = new Set();
-  for (const a of document.querySelectorAll(
-    'nav a[href*="/c/"], [data-testid^="history-item"] a[href*="/c/"]'
-  )) {
-    const match = a.href.match(/\/c\/([a-f0-9-]+)/i);
-    if (match) ids.add(match[1]);
-  }
-  return ids.size;
-}
-
-async function countApiChats(fetchFn) {
-  try {
-    return (await listConversationIds(fetchFn)).length;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Live-verified: PATCH is_visible:false removes from API but nav link stays
- * (patch 200, stillInNav:true). Must check API + nav.
+ * Live: PATCH is_visible:false clears API but sidebar link may remain — check both.
  */
 async function assertChatGptGone(fetchFn) {
-  const apiCount = await countApiChats(fetchFn);
-  const navCount = countNavChats();
+  let apiCount = null;
+  try {
+    apiCount = (await listConversationIds(fetchFn)).length;
+  } catch {
+    /* session/API unavailable */
+  }
+
+  const navCount = countChatGptNavChats();
   const parts = [];
   if (apiCount > 0) parts.push(`${apiCount} in API`);
   if (navCount > 0) parts.push(`${navCount} visible in sidebar`);
   if (parts.length) {
     throw new Error(`ChatGPT chats still remain (${parts.join(", ")})`);
   }
-}
-
-/** Live-verified: aria-label "Delete all Delete all chats", text "Delete all". */
-function findSettingsBulkDeleteButton() {
-  return (
-    queryVisible('button[aria-label*="Delete all" i], button[aria-label*="Alle löschen" i]')[0] ??
-    queryVisible("button").find((el) => {
-      const aria = (el.getAttribute("aria-label") || "").toLowerCase();
-      return aria.includes("delete all") || aria.includes("alle löschen");
-    }) ??
-    null
-  );
-}
-
-/** Live-verified: data-testid="history-item-N-options", aria Open conversation options. */
-function findNextConversationOptionsButton() {
-  return (
-    queryVisible('button[data-testid$="-options"]')[0] ??
-    queryVisible(
-      'button[aria-label*="Open conversation options" i], button[aria-label*="Unterhaltungsoptionen" i]'
-    )[0] ??
-    null
-  );
 }
 
 async function hideConversation(fetchFn, headers, id) {
@@ -130,7 +91,7 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
   const headers = await authHeaders(fetchFn);
   const ids = await listConversationIds(fetchFn);
   if (!ids.length) {
-    const navCount = countNavChats();
+    const navCount = countChatGptNavChats();
     if (navCount > 0) throw new Error(`API listed 0 chats but ${navCount} visible in sidebar`);
     return { deleted: 0, total: 0 };
   }
@@ -162,8 +123,8 @@ async function deleteAllSettingsDom(ctx) {
 
   await sleep(1200);
 
-  const bulkBtn = findSettingsBulkDeleteButton();
-  if (!bulkBtn) throw new Error("ChatGPT settings “Delete all” button not found");
+  const bulkBtn = findChatGptSettingsBulkDelete();
+  if (!bulkBtn) throw new Error("ChatGPT settings bulk delete button not found");
   bulkBtn.click();
 
   await sleep(500);
@@ -175,11 +136,11 @@ async function deleteAllSettingsDom(ctx) {
 }
 
 async function deleteSidebarMenus(onProgress, fetchFn) {
-  const estimated = Math.max(countNavChats(), 1);
+  const estimated = Math.max(countChatGptNavChats(), 1);
   let deleted = 0;
 
   for (let i = 0; i < 200; i++) {
-    const optionsBtn = findNextConversationOptionsButton();
+    const optionsBtn = findChatGptConversationOptionsButton();
     if (!optionsBtn) break;
 
     report(onProgress, {
@@ -191,7 +152,7 @@ async function deleteSidebarMenus(onProgress, fetchFn) {
 
     optionsBtn.click();
     await sleep(450);
-    const del = findByKeywords(KW.delete);
+    const del = findOpenMenuDeleteItem();
     if (!del) break;
 
     del.click();
@@ -250,5 +211,9 @@ export const chatgptProvider = {
     );
 
     return { ...result, provider: "chatgpt" };
+  },
+
+  async verifyGone(ctx) {
+    await assertChatGptGone(ctx.fetchFn);
   },
 };

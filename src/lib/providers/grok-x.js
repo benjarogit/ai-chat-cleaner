@@ -2,8 +2,11 @@ import {
   clickEachTrash,
   clickKeywords,
   confirmDialogs,
-  findAllByKeywords,
-  findByKeywords,
+  countGrokXHistoryItems,
+  findGrokXHistoryMehr,
+  findGrokXHistoryRoot,
+  findGrokXSettingsDeleteButton,
+  findOpenMenuDeleteItem,
   KW,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
@@ -12,6 +15,7 @@ import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 const BEARER =
   "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 const HISTORY_HASH = "9Hyh5D4-WXLnExZkONSkZg";
+const GROK_SETTINGS_URL = "https://x.com/settings/grok_settings";
 
 const EMPTY_HISTORY = [
   "kein chatverlauf",
@@ -130,9 +134,13 @@ function isGrokHistoryEmptyDom() {
   return EMPTY_HISTORY.some((phrase) => text.includes(phrase));
 }
 
+/**
+ * Live x.com/i/grok: count only history-panel "Mehr" rows (not nav "Mehr Menübefehle").
+ * GrokHistory GraphQL returned 0 while DOM had 5 chats on test account.
+ */
 function countGrokHistoryDom() {
   if (isGrokHistoryEmptyDom()) return 0;
-  return findAllByKeywords(KW.more).length;
+  return countGrokXHistoryItems();
 }
 
 async function assertGrokGone(fetchFn) {
@@ -195,8 +203,12 @@ async function openHistoryPanel() {
     await sleep(2500);
   }
 
+  if (findGrokXHistoryRoot()) return;
+
   const opened = await clickKeywords(KW.history, { timeout: 8000 });
-  if (!opened) throw new Error("Grok history panel not found (Chatverlauf / Verlauf)");
+  if (!opened && !findGrokXHistoryRoot()) {
+    throw new Error("Grok history panel not found (Chatverlauf / Verlauf)");
+  }
   await sleep(700);
 }
 
@@ -207,7 +219,7 @@ async function deleteHistoryDom(fetchFn, onProgress) {
   let deleted = 0;
 
   for (let i = 0; i < 120; i++) {
-    const mehr = findByKeywords(KW.more);
+    const mehr = findGrokXHistoryMehr();
     if (!mehr) break;
 
     const overall = 10 + ((deleted + 1) / estimated) * 85;
@@ -220,7 +232,7 @@ async function deleteHistoryDom(fetchFn, onProgress) {
 
     mehr.click();
     await sleep(350);
-    const del = findByKeywords(KW.delete);
+    const del = findOpenMenuDeleteItem();
     if (!del) break;
 
     del.click();
@@ -247,11 +259,10 @@ async function deleteHistoryDom(fetchFn, onProgress) {
 }
 
 async function deleteAllSettingsDom(ctx) {
-  const onGrokSettings =
-    location.pathname.includes("/settings") && location.href.toLowerCase().includes("grok");
+  const onGrokSettings = location.pathname.includes("/settings/grok");
 
   if (!onGrokSettings && ctx.step !== "settings-delete") {
-    await navigateTo("https://x.com/settings/privacy_and_safety", {
+    await navigateTo(GROK_SETTINGS_URL, {
       providerId: "grok-x",
       step: "settings-delete",
       method: "dom-settings",
@@ -259,9 +270,14 @@ async function deleteAllSettingsDom(ctx) {
     });
   }
 
-  await clickKeywords([...KW.grok, ...KW.data], { timeout: 12000 });
-  const bulk = await clickKeywords(KW.deleteAll, { timeout: 12000 });
-  if (!bulk) throw new Error("X Grok bulk-delete button not found in settings");
+  await sleep(1500);
+
+  const bulk = findGrokXSettingsDeleteButton();
+  if (bulk) {
+    bulk.click();
+  } else if (!(await clickKeywords(KW.deleteAll, { timeout: 12000 }))) {
+    throw new Error("X Grok bulk-delete button not found in settings");
+  }
 
   await confirmDialogs();
   await assertGrokGone(ctx.fetchFn);
@@ -291,18 +307,25 @@ export const grokXProvider = {
     if (ctx.step === "settings-delete") {
       return { ...(await deleteAllSettingsDom(ctx)), method: "dom-settings", provider: "grok-x" };
     }
+    if (ctx.step === "dom-history") {
+      return {
+        ...(await deleteHistoryDom(ctx.fetchFn, ctx.onProgress)),
+        method: "dom-history",
+        provider: "grok-x",
+      };
+    }
 
     const result = await tryMethods(
       [
         {
-          name: "api-graphql-individual",
-          step: null,
-          fn: () => deleteAllViaGraphql(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
-        },
-        {
           name: "dom-history",
           step: "dom-history",
           fn: () => deleteHistoryDom(ctx.fetchFn, ctx.onProgress),
+        },
+        {
+          name: "api-graphql-individual",
+          step: null,
+          fn: () => deleteAllViaGraphql(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
         },
         { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
       ],
@@ -310,5 +333,10 @@ export const grokXProvider = {
     );
 
     return { ...result, provider: "grok-x" };
+  },
+
+  async verifyGone(ctx) {
+    await openHistoryPanel();
+    await assertGrokGone(ctx.fetchFn);
   },
 };

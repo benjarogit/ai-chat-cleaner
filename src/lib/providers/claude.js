@@ -1,10 +1,11 @@
 import {
   clickClaudeOverflowDeletes,
-  clickKeywords,
+  claudeRecentsSelectAll,
   confirmDialogs,
   countUniqueChatLinks,
-  findToolbarButton,
-  KW,
+  enterClaudeRecentsSelectMode,
+  findClaudeRecentsBulkDelete,
+  isClaudeRecentsSelectMode,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
 import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
@@ -62,7 +63,7 @@ async function countApiChats(fetchFn) {
   return chats.length;
 }
 
-/** API + DOM must both be empty — API-only check caused false success. */
+/** Live claude.ai/recents: /chat/{uuid} links; API can lag behind DOM (3 DOM vs 2 API on test). */
 async function assertAllGone(fetchFn) {
   const apiCount = await countApiChats(fetchFn);
   const domCount = countUniqueChatLinks();
@@ -120,19 +121,18 @@ async function deleteRecentsBulk(ctx) {
 
   await sleep(800);
 
-  const inSelectMode = findToolbarButton(KW.cancel);
-  if (!inSelectMode) {
-    const started = await clickKeywords(KW.selectChats, { timeout: 10000 });
-    if (!started) throw new Error("Recents “Chats auswählen” not found");
+  if (!isClaudeRecentsSelectMode()) {
+    const started = await enterClaudeRecentsSelectMode();
+    if (!started) throw new Error("Recents select-mode entry not found");
     await sleep(400);
   }
 
-  const selectAll = await clickKeywords(KW.selectAll, { timeout: 8000 });
-  if (!selectAll) throw new Error("Recents “Alles auswählen” not found");
+  const selectAll = await claudeRecentsSelectAll();
+  if (!selectAll) throw new Error("Recents select-all not found");
   await sleep(400);
 
-  const deleteBtn = findToolbarButton(KW.delete);
-  if (!deleteBtn) throw new Error("Recents bulk “Löschen” button not found");
+  const deleteBtn = findClaudeRecentsBulkDelete();
+  if (!deleteBtn) throw new Error("Recents bulk delete button not found");
   deleteBtn.click();
   await sleep(500);
   await confirmDialogs();
@@ -170,16 +170,23 @@ export const claudeProvider = {
     if (ctx.step === "dom-recents") {
       return { ...(await deleteRecentsBulk(ctx)), method: "dom-recents", provider: "claude" };
     }
+    if (ctx.step === "dom-overflow") {
+      return { ...(await deleteViaOverflow(ctx)), method: "dom-overflow", provider: "claude" };
+    }
 
     const result = await tryMethods(
       [
-        { name: "api", step: null, fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
         { name: "dom-recents", step: "dom-recents", fn: () => deleteRecentsBulk(ctx) },
+        { name: "api", step: null, fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
         { name: "dom-overflow", step: "dom-overflow", fn: () => deleteViaOverflow(ctx) },
       ],
       ctx
     );
 
     return { ...result, provider: "claude" };
+  },
+
+  async verifyGone(ctx) {
+    await assertAllGone(ctx.fetchFn);
   },
 };

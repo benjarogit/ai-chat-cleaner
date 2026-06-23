@@ -21,10 +21,14 @@ async function runDelete(options = {}) {
     onProgress: wireProgress(options.onProgress),
   }).catch((error) => {
     if (error.name === "NavigationResumeError") {
+      const msg =
+        error.step === "verify"
+          ? "Refreshing page to verify deletion…"
+          : "Navigating… will continue automatically.";
       sendRuntimeMessage({
         action: "updateProgress",
-        message: "Navigating… will continue automatically.",
-        overall: 15,
+        message: msg,
+        overall: error.step === "verify" ? 95 : 15,
       });
       return;
     }
