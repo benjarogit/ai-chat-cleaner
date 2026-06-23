@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Chat Cleaner",
   "short_name": "ACC",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Bulk-delete chats on Claude, ChatGPT, Gemini, Grok & Grok on X — Firefox desktop & Android",
   "author": "Sunny C.",
   "homepage_url": "https://sunnyc.de",

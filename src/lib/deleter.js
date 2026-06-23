@@ -6,7 +6,33 @@ import {
   NavigationResumeError,
   setPending,
 } from "./navigate.js";
+import { debugLog, debugLogError, debugLogStart, getDebugReport } from "./debug-log.js";
 import { report } from "./shared.js";
+import { ext } from "./api.js";
+
+function accVersion() {
+  try {
+    return ext.runtime.getManifest().version;
+  } catch {
+    return "unknown";
+  }
+}
+
+function debugContext(ctx, provider) {
+  return {
+    version: accVersion(),
+    url: ctx.url || (typeof location !== "undefined" ? location.href : ""),
+    provider: provider?.id,
+  };
+}
+
+function errorPayload(error, ctx, provider) {
+  return {
+    type: "error",
+    message: error.message,
+    debugReport: getDebugReport(debugContext(ctx, provider)),
+  };
+}
 
 async function buildCtx(options) {
   const tabId = await getTabId();
@@ -97,7 +123,8 @@ export async function tryResumeDelete(options = {}) {
       return await runPostVerify(ctx, provider, pending);
     } catch (error) {
       await clearPending();
-      report(ctx.onProgress, { type: "error", message: error.message });
+      debugLogError(error);
+      report(ctx.onProgress, errorPayload(error, ctx, provider));
       throw error;
     }
   }
@@ -121,7 +148,8 @@ export async function tryResumeDelete(options = {}) {
   } catch (error) {
     if (error instanceof NavigationResumeError) throw error;
     await clearPending();
-    report(ctx.onProgress, { type: "error", message: error.message });
+    debugLogError(error);
+    report(ctx.onProgress, errorPayload(error, ctx, provider));
     throw error;
   }
 }
@@ -145,6 +173,12 @@ export async function deleteAllChats(options = {}) {
     overall: 0,
   });
 
+  debugLogStart({
+    provider: provider.id,
+    url: ctx.url,
+    step: ctx.step,
+  });
+
   try {
     const result = await provider.deleteAll(ctx);
     return await beginPostVerify(ctx, provider, result);
@@ -152,7 +186,8 @@ export async function deleteAllChats(options = {}) {
     if (error instanceof NavigationResumeError) {
       throw error;
     }
-    report(ctx.onProgress, { type: "error", message: error.message });
+    debugLogError(error);
+    report(ctx.onProgress, errorPayload(error, ctx, provider));
     throw error;
   }
 }

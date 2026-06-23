@@ -9,6 +9,8 @@ const confirmNo = $("confirmNo");
 const status = $("status");
 const errorEl = $("error");
 const logEl = $("log");
+const debugActions = $("debugActions");
+const copyDebugBtn = $("copyDebug");
 const overallBar = $("overallProgress");
 const currentBar = $("currentProgress");
 const overallText = $("overallProgressText");
@@ -17,21 +19,99 @@ const progressBlock = document.querySelector(".progress-block");
 const mainPage = $("mainPage");
 const confirmPage = $("confirmPage");
 
+const popupLog = [];
+let lastDebugReport = "";
+
+function accVersion() {
+  try {
+    return ext.runtime.getManifest().version;
+  } catch {
+    return "unknown";
+  }
+}
+
 function addLog(message) {
+  const line = `${new Date().toLocaleTimeString()} — ${message}`;
+  popupLog.push(line);
   const entry = document.createElement("div");
-  entry.textContent = `${new Date().toLocaleTimeString()} — ${message}`;
+  entry.textContent = line;
   logEl.appendChild(entry);
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-function setError(message) {
+function buildPopupDebugReport(errorMessage) {
+  const tabUrl = lastDebugReport ? null : "see content script report";
+  const lines = [
+    "=== AI Chat Cleaner — debug report (redacted) ===",
+    `version: ${accVersion()}`,
+    `generated: ${new Date().toISOString()}`,
+    `surface: popup`,
+    "",
+    "--- popup log ---",
+    ...popupLog,
+  ];
+  if (errorMessage) {
+    lines.push("", "--- error ---", errorMessage);
+  }
+  if (lastDebugReport) {
+    lines.push("", "--- content script report ---", lastDebugReport);
+  } else if (tabUrl) {
+    lines.push("", `note: ${tabUrl}`);
+  }
+  lines.push("", "=== end ===");
+  return lines.join("\n");
+}
+
+function showDebugActions() {
+  debugActions.hidden = false;
+}
+
+function hideDebugActions() {
+  debugActions.hidden = true;
+  debugActions.classList.remove("copied");
+}
+
+async function copyDebugReport() {
+  let report = lastDebugReport;
+  if (!report) {
+    const tab = await getActiveTab();
+    if (tab?.id) {
+      try {
+        const response = await sendTabMessage(tab.id, { action: "getDebugLog" });
+        report = response?.debugReport || "";
+        if (report) lastDebugReport = report;
+      } catch {
+        /* content script unavailable */
+      }
+    }
+  }
+  if (!report) {
+    report = buildPopupDebugReport(errorEl.textContent || undefined);
+  }
+
+  try {
+    await navigator.clipboard.writeText(report);
+    debugActions.classList.add("copied");
+    addLog("Debug report copied to clipboard.");
+  } catch {
+    addLog("Clipboard failed — select text from console or try again.");
+  }
+}
+
+function setError(message, debugReport) {
   if (!message) {
     errorEl.hidden = true;
     errorEl.textContent = "";
+    hideDebugActions();
+    lastDebugReport = "";
     return;
   }
   errorEl.hidden = false;
   errorEl.textContent = message;
+  if (debugReport) {
+    lastDebugReport = debugReport;
+  }
+  showDebugActions();
 }
 
 function resetProgress() {
@@ -79,12 +159,17 @@ confirmNo.addEventListener("click", () => {
   addLog("Cancelled.");
 });
 
+copyDebugBtn.addEventListener("click", () => {
+  copyDebugReport();
+});
+
 confirmYes.addEventListener("click", async () => {
   confirmPage.hidden = true;
   mainPage.hidden = false;
   deleteButton.disabled = true;
   progressBlock.hidden = false;
   setError("");
+  lastDebugReport = "";
   resetProgress();
   status.textContent = "Starting…";
   addLog("Deletion started.");
@@ -99,7 +184,8 @@ confirmYes.addEventListener("click", async () => {
   try {
     await sendTabMessage(tab.id, { action: "deleteAll" });
   } catch (err) {
-    setError(`Page script unreachable: ${err.message}. Reload the tab and try again.`);
+    const msg = `Page script unreachable: ${err.message}. Reload the tab and try again.`;
+    setError(msg, buildPopupDebugReport(msg));
     deleteButton.disabled = false;
     addLog(`Error: ${err.message}`);
   }
@@ -123,7 +209,7 @@ onRuntimeMessage((request) => {
 
   if (request.action === "error") {
     deleteButton.disabled = false;
-    setError(request.error);
+    setError(request.error, request.debugReport);
     addLog(`Error: ${request.error}`);
   }
 });

@@ -74,6 +74,26 @@ header h1 {
   color: #ffb4b4;
 }
 
+.debug-actions {
+  margin-top: 10px;
+}
+
+.debug-actions button {
+  margin-bottom: 6px;
+}
+
+.debug-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.debug-actions.copied .debug-hint::after {
+  content: " Copied!";
+  color: var(--ok);
+}
+
 button {
   width: 100%;
   padding: 11px 14px;

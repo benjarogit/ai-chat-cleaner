@@ -1,8 +1,11 @@
+import { debugLog, debugLogProgress } from "./debug-log.js";
+
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function report(onProgress, payload) {
+  debugLogProgress(payload);
   onProgress?.(payload);
 }
 
@@ -13,11 +16,18 @@ export async function tryMethods(methods, ctx) {
   for (const { name, fn, step } of methods) {
     if (startAt && step !== startAt) continue;
 
+    debugLog("method", `trying ${name}`, { method: name });
+
     try {
       const result = await fn(ctx);
+      debugLog("method", `${name} ok`, { method: name });
       return { ...result, method: name };
     } catch (error) {
-      if (error.name === "NavigationResumeError") throw error;
+      if (error.name === "NavigationResumeError") {
+        debugLog("nav", `navigation: ${error.step}`, { method: name });
+        throw error;
+      }
+      debugLog("method-fail", `${name}: ${error.message}`, { method: name });
       errors.push(`${name}: ${error.message}`);
     }
   }
