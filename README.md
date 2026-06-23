@@ -1,51 +1,101 @@
 # AI Chat Cleaner (ACC)
 
-[Deutsch](README.de.md) · [Sunny C.](https://sunnyc.de)
+**Bulk-delete all your AI chat history — one click, five platforms.**
 
-Bulk-delete all conversations on supported AI chat sites.
+[Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/claudedeleter/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
 
-| Site | URL |
-|------|-----|
+Open-source browser extension (MIT). Delete every conversation on Claude, ChatGPT, Gemini, Grok, and Grok on X without clicking through each chat individually.
+
+---
+
+## Supported sites
+
+| Platform | URL |
+|----------|-----|
 | Claude | [claude.ai](https://claude.ai) |
 | ChatGPT | [chatgpt.com](https://chatgpt.com) |
 | Gemini | [gemini.google.com](https://gemini.google.com) |
 | Grok | [grok.com](https://grok.com) |
 | Grok on X | [x.com/i/grok](https://x.com/i/grok) |
 
-Fork of [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), maintained by **Sunny C.**
+---
 
-## How it works
+## Install
 
-Each platform uses **API first**, then **DOM fallbacks** if the internal API fails:
+### Firefox (desktop & Android)
 
-| Platform | Primary | Fallback |
-|----------|---------|----------|
-| Claude | REST API | — |
-| ChatGPT | `PATCH /backend-api/conversations` (bulk) | Settings → Delete all chats |
-| Gemini | `batchexecute` RPC | Sidebar delete buttons |
-| Grok.com | Settings bulk delete (DOM) | History item delete |
-| Grok on X | Settings bulk delete | GraphQL list + delete, history UI |
+Three ways to install — pick what fits you:
 
-## Downloads
+| Method | Best for | Link |
+|--------|----------|------|
+| **Add-ons for Firefox (AMO)** | Most users — auto-updates, one click | [Install on AMO](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) |
+| **GitHub Release (.xpi)** | Sideloading without the store | [acc-firefox.xpi](https://github.com/benjarogit/claudedeleter/releases/latest) |
+| **Load unpacked** | Developers / testing latest `main` | `npm ci && npm run build` → load `dist/firefox/` in `about:debugging` |
 
-[GitHub Releases](https://github.com/benjarogit/claudedeleter/releases) — `acc-firefox.zip`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`
+> **AMO note:** If the store page is not live yet, the add-on is still in review — use the `.xpi` from Releases or load unpacked in the meantime.
+
+**Android:** Install from AMO in Firefox for Android, or sideload the `.xpi` (Settings → Add-ons → gear icon → Install from file).
+
+### Chrome / Edge
+
+1. Download [`acc-chrome.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) (Chrome) or [`acc-edge.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) (Edge).
+2. Unzip, open `chrome://extensions` or `edge://extensions`.
+3. Enable **Developer mode** → **Load unpacked** → select the extracted folder.
+
+### Without an extension (bookmarklet / console)
+
+Paste [`acc-console.js`](https://github.com/benjarogit/claudedeleter/releases/latest) into the DevTools console on a supported site, or use `dist/bookmarklet.txt` as a bookmark URL.
+
+---
 
 ## Usage
 
-1. Open a supported site (logged in).
-2. Click ACC → **Delete all chats** → confirm.
-3. Stay on the tab until finished (DOM fallbacks may navigate to settings).
+1. Open a supported site and **log in**.
+2. Click the **ACC** toolbar icon → **Delete all chats** → confirm.
+3. Keep the tab open until the progress bar finishes (some fallbacks navigate to settings pages).
 
-## Mozilla AMO
+---
 
-Upload **`acc-firefox.zip`**. Check Firefox + Firefox for Android. ID: `aichatcleaner@sunnyc.de`.
+## How it works
 
-## Build
+API-first on every platform; DOM fallbacks if the internal API is unavailable.
+
+| Platform | Primary | Fallback |
+|----------|---------|----------|
+| Claude | REST API (`DELETE` per chat) | Sidebar trash |
+| ChatGPT | Bulk `PATCH /backend-api/conversations` | Per-chat API → Settings UI |
+| Gemini | `batchexecute` RPC | Sidebar delete |
+| Grok.com | `DELETE /rest/app-chat/conversations` | History UI (Mehr → Löschen) |
+| Grok on X | GraphQL delete (when op found in page) | Chatverlauf → Mehr → Delete |
+
+Universal DE/EN UI keywords (Verlauf, Chatverlauf, Einstellungen, …) so fallbacks work regardless of interface language.
+
+---
+
+## Privacy
+
+- **No data collection** — nothing is sent to the developer (`data_collection_permissions: none` on Firefox).
+- Deletions run **only in your browser** on the respective sites.
+- No account or signup with us.
+
+---
+
+## Build from source
 
 ```bash
+git clone https://github.com/benjarogit/claudedeleter.git
+cd claudedeleter
 npm ci && npm run build
 ```
 
+Artifacts land in `dist/`: `acc-firefox.zip`, `acc-firefox.xpi`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`.
+
+---
+
+## Credits
+
+Fork of [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), extended and maintained by **[Sunny C.](https://sunnyc.de)**.
+
 ## License
 
-MIT — Copyright (c) 2026 [Sunny C.](https://sunnyc.de)
+MIT — Copyright (c) 2026 Sunny C.
