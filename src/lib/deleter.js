@@ -69,6 +69,7 @@ export async function deleteAllChats(options = {}) {
       type: "complete",
       message: msg,
       overall: 100,
+      current: 100,
       deleted,
       total,
       provider: provider.id,

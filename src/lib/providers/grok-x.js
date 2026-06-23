@@ -1,8 +1,9 @@
 import {
-  clickEachMoreDelete,
   clickEachTrash,
   clickKeywords,
   confirmDialogs,
+  findAllByKeywords,
+  findByKeywords,
   KW,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
@@ -11,6 +12,13 @@ import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 const BEARER =
   "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 const HISTORY_HASH = "9Hyh5D4-WXLnExZkONSkZg";
+
+const EMPTY_HISTORY = [
+  "kein chatverlauf",
+  "no chat history",
+  "no conversation history",
+  "no grok history",
+];
 
 const FEATURES = {
   responsive_web_graphql_timeline_navigation_enabled: true,
@@ -117,14 +125,47 @@ async function listGrokConversationIds(fetchFn) {
   return all;
 }
 
+function isGrokHistoryEmptyDom() {
+  const text = document.body.innerText.toLowerCase();
+  return EMPTY_HISTORY.some((phrase) => text.includes(phrase));
+}
+
+function countGrokHistoryDom() {
+  if (isGrokHistoryEmptyDom()) return 0;
+  return findAllByKeywords(KW.more).length;
+}
+
+async function assertGrokGone(fetchFn) {
+  let apiCount = null;
+  try {
+    apiCount = (await listGrokConversationIds(fetchFn)).length;
+  } catch {
+    /* GraphQL unavailable — rely on DOM */
+  }
+
+  const domCount = countGrokHistoryDom();
+  const parts = [];
+  if (apiCount > 0) parts.push(`${apiCount} in API`);
+  if (domCount > 0) parts.push(`${domCount} visible in history UI`);
+  if (parts.length) {
+    throw new Error(`Grok chats still remain (${parts.join(", ")})`);
+  }
+}
+
 async function deleteAllViaGraphql(fetchFn, onProgress, delayMs) {
   const op = await findDeleteQueryId();
   if (!op) throw new Error("Grok delete GraphQL operation not found in page bundles");
 
   const ids = await listGrokConversationIds(fetchFn);
-  if (!ids.length) return { deleted: 0, total: 0 };
+  if (!ids.length) {
+    await openHistoryPanel();
+    if (countGrokHistoryDom() > 0) {
+      throw new Error("API listed 0 Grok chats but history UI still has items");
+    }
+    return { deleted: 0, total: 0 };
+  }
 
-  return runDeleteLoop({
+  const result = await runDeleteLoop({
     ids,
     delayMs,
     label: "Grok chat",
@@ -143,6 +184,9 @@ async function deleteAllViaGraphql(fetchFn, onProgress, delayMs) {
       throw lastErr;
     },
   });
+
+  await assertGrokGone(fetchFn);
+  return result;
 }
 
 async function openHistoryPanel() {
@@ -154,6 +198,52 @@ async function openHistoryPanel() {
   const opened = await clickKeywords(KW.history, { timeout: 8000 });
   if (!opened) throw new Error("Grok history panel not found (Chatverlauf / Verlauf)");
   await sleep(700);
+}
+
+async function deleteHistoryDom(fetchFn, onProgress) {
+  await openHistoryPanel();
+
+  const estimated = Math.max(countGrokHistoryDom(), 1);
+  let deleted = 0;
+
+  for (let i = 0; i < 120; i++) {
+    const mehr = findByKeywords(KW.more);
+    if (!mehr) break;
+
+    const overall = 10 + ((deleted + 1) / estimated) * 85;
+    report(onProgress, {
+      type: "status",
+      message: `Deleting Grok chat ${deleted + 1}…`,
+      overall: Math.min(overall, 95),
+      current: 40,
+    });
+
+    mehr.click();
+    await sleep(350);
+    const del = findByKeywords(KW.delete);
+    if (!del) break;
+
+    del.click();
+    await sleep(250);
+    await confirmDialogs();
+    deleted++;
+
+    report(onProgress, {
+      type: "status",
+      message: `Deleted ${deleted} Grok chat(s)…`,
+      overall: Math.min(10 + (deleted / estimated) * 85, 95),
+      current: 100,
+    });
+    await sleep(450);
+  }
+
+  if (!deleted) {
+    deleted = await clickEachTrash({ max: 100, delayMs: 500 });
+  }
+  if (!deleted) throw new Error("No deletable Grok items in X history UI");
+
+  await assertGrokGone(fetchFn);
+  return { deleted, total: deleted };
 }
 
 async function deleteAllSettingsDom(ctx) {
@@ -174,18 +264,8 @@ async function deleteAllSettingsDom(ctx) {
   if (!bulk) throw new Error("X Grok bulk-delete button not found in settings");
 
   await confirmDialogs();
+  await assertGrokGone(ctx.fetchFn);
   return { deleted: "all", total: "all" };
-}
-
-async function deleteHistoryDom() {
-  await openHistoryPanel();
-
-  let deleted = await clickEachMoreDelete({ max: 120, delayMs: 450 });
-  if (!deleted) deleted = await clickEachTrash({ max: 100, delayMs: 500 });
-  if (!deleted) throw new Error("No deletable Grok items in X history UI");
-
-  await confirmDialogs();
-  return { deleted, total: deleted };
 }
 
 export const grokXProvider = {
@@ -219,7 +299,11 @@ export const grokXProvider = {
           step: null,
           fn: () => deleteAllViaGraphql(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
         },
-        { name: "dom-history", step: "dom-history", fn: deleteHistoryDom },
+        {
+          name: "dom-history",
+          step: "dom-history",
+          fn: () => deleteHistoryDom(ctx.fetchFn, ctx.onProgress),
+        },
         { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
       ],
       ctx

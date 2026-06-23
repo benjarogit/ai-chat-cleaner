@@ -41,6 +41,17 @@ function resetProgress() {
   currentText.textContent = "0%";
 }
 
+function setProgress(overall, current) {
+  if (overall != null) {
+    overallBar.style.width = `${overall}%`;
+    overallText.textContent = `${Math.round(overall)}%`;
+  }
+  if (current != null) {
+    currentBar.style.width = `${current}%`;
+    currentText.textContent = `${Math.round(current)}%`;
+  }
+}
+
 async function init() {
   const tab = await getActiveTab();
   const provider = tab?.url ? detectProvider(tab.url) : null;
@@ -96,14 +107,7 @@ confirmYes.addEventListener("click", async () => {
 
 onRuntimeMessage((request) => {
   if (request.action === "updateProgress") {
-    if (request.overall != null) {
-      overallBar.style.width = `${request.overall}%`;
-      overallText.textContent = `${Math.round(request.overall)}%`;
-    }
-    if (request.current != null) {
-      currentBar.style.width = `${request.current}%`;
-      currentText.textContent = `${Math.round(request.current)}%`;
-    }
+    setProgress(request.overall, request.current);
     if (request.message) {
       status.textContent = request.message;
       addLog(request.message);
@@ -112,6 +116,7 @@ onRuntimeMessage((request) => {
 
   if (request.action === "complete") {
     deleteButton.disabled = false;
+    setProgress(request.overall ?? 100, request.current ?? 100);
     status.textContent = request.message || "Done.";
     addLog("Completed.");
   }
