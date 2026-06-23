@@ -1,5 +1,9 @@
 # AI Chat Cleaner (ACC)
 
+<p align="center">
+  <img src="assets/acc-logo.png" alt="AI Chat Cleaner logo" width="128" height="128">
+</p>
+
 **Bulk-delete all your AI chat history — one click, five platforms.**
 
 [Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/claudedeleter/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
@@ -63,8 +67,8 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 | Platform | Primary | Fallback |
 |----------|---------|----------|
 | Claude | REST API (`DELETE` per chat) | Sidebar trash |
-| ChatGPT | Bulk `PATCH /backend-api/conversations` | Per-chat API → Settings UI |
-| Gemini | `batchexecute` RPC | Sidebar delete |
+| ChatGPT | `PATCH /backend-api/conversation/{id}` per chat | Settings UI |
+| Gemini | `batchexecute` RPC (page context) | Sidebar delete |
 | Grok.com | `DELETE /rest/app-chat/conversations` | History UI (Mehr → Löschen) |
 | Grok on X | GraphQL delete (when op found in page) | Chatverlauf → Mehr → Delete |
 

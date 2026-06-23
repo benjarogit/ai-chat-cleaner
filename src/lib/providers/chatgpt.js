@@ -1,6 +1,6 @@
 import { clickKeywords, confirmDialogs, KW } from "../dom.js";
 import { navigateTo } from "../navigate.js";
-import { report, runDeleteLoop, tryMethods } from "../shared.js";
+import { assertRemaining, report, runDeleteLoop, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://chatgpt.com";
 const API = `${ORIGIN}/backend-api`;
@@ -31,7 +31,7 @@ async function listConversationIds(fetchFn) {
 
   while (true) {
     const response = await fetchFn(
-      `${API}/conversations?offset=${offset}&limit=28&order=updated`,
+      `${API}/conversations?offset=${offset}&limit=28&order=updated&is_archived=false`,
       { credentials: "include", headers }
     );
     if (!response.ok) throw new Error(`list HTTP ${response.status}`);
@@ -41,43 +41,49 @@ async function listConversationIds(fetchFn) {
     ids.push(...page.filter((c) => !c.is_archived).map((c) => c.id));
     offset += page.length;
     if (typeof data.total === "number" && offset >= data.total) break;
+    if (page.length < 28) break;
   }
 
   return ids;
 }
 
-async function deleteAllBulk(fetchFn) {
-  const headers = await authHeaders(fetchFn);
-  const response = await fetchFn(`${API}/conversations`, {
+async function countVisibleChats(fetchFn) {
+  try {
+    return (await listConversationIds(fetchFn)).length;
+  } catch {
+    return document.querySelectorAll('a[href*="/c/"]').length;
+  }
+}
+
+async function hideConversation(fetchFn, headers, id) {
+  const response = await fetchFn(`${API}/conversation/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers,
     body: JSON.stringify({ is_visible: false }),
   });
-  if (!response.ok) throw new Error(`bulk delete HTTP ${response.status}`);
-  return { deleted: "all", total: "all" };
+  if (!response.ok) throw new Error(`hide ${id} HTTP ${response.status}`);
 }
 
 async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
   const headers = await authHeaders(fetchFn);
   const ids = await listConversationIds(fetchFn);
-  if (!ids.length) return { deleted: 0, total: 0 };
+  if (!ids.length) {
+    const domCount = document.querySelectorAll('a[href*="/c/"]').length;
+    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
+    return { deleted: 0, total: 0 };
+  }
 
-  return runDeleteLoop({
+  const result = await runDeleteLoop({
     ids,
     delayMs,
     label: "chat",
     onProgress,
-    deleteOne: async (id) => {
-      const response = await fetchFn(`${API}/conversations/${id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers,
-        body: JSON.stringify({ is_visible: false }),
-      });
-      if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
-    },
+    deleteOne: (id) => hideConversation(fetchFn, headers, id),
   });
+
+  await assertRemaining(() => countVisibleChats(fetchFn), 0, "ChatGPT chats");
+  return result;
 }
 
 async function deleteAllDom(ctx) {
@@ -122,7 +128,6 @@ export const chatgptProvider = {
 
     const result = await tryMethods(
       [
-        { name: "api-bulk", step: null, fn: () => deleteAllBulk(ctx.fetchFn) },
         {
           name: "api-individual",
           step: null,

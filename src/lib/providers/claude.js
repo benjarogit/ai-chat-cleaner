@@ -1,5 +1,5 @@
 import { clickEachTrash, clickKeywords, confirmDialogs, KW } from "../dom.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { assertRemaining, report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://claude.ai";
 
@@ -24,12 +24,27 @@ async function getChatIds(orgId, fetchFn) {
   return data.map((c) => c.uuid);
 }
 
+async function countChats(fetchFn) {
+  try {
+    const orgId = await getOrganizationId(fetchFn);
+    return (await getChatIds(orgId, fetchFn)).length;
+  } catch {
+    return document.querySelectorAll('[data-testid="chat-item"], a[href*="/chat/"]').length;
+  }
+}
+
 async function deleteAllApi(fetchFn, onProgress, delayMs) {
   const orgId = await getOrganizationId(fetchFn);
   const chatIds = await getChatIds(orgId, fetchFn);
-  if (!chatIds.length) return { deleted: 0, total: 0 };
+  if (!chatIds.length) {
+    const domCount = document.querySelectorAll(
+      '[data-testid="chat-item"], a[href*="/chat/"]'
+    ).length;
+    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
+    return { deleted: 0, total: 0 };
+  }
 
-  return runDeleteLoop({
+  const result = await runDeleteLoop({
     ids: chatIds,
     delayMs,
     label: "chat",
@@ -42,6 +57,9 @@ async function deleteAllApi(fetchFn, onProgress, delayMs) {
       if (!response.ok) throw new Error(`delete ${chatId} HTTP ${response.status}`);
     },
   });
+
+  await assertRemaining(() => countChats(fetchFn), 0, "Claude chats");
+  return result;
 }
 
 async function deleteAllDom() {

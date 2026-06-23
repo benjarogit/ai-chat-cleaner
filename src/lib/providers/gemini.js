@@ -1,59 +1,12 @@
 import { clickEachTrash, clickKeywords, confirmDialogs, KW } from "../dom.js";
-import { report, runDeleteLoop, tryMethods } from "../shared.js";
+import { geminiBatchInPage } from "../gemini-page.js";
+import { assertRemaining, report, runDeleteLoop, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://gemini.google.com";
-const BATCH_URL = `${ORIGIN}/_/BardChatUi/data/batchexecute`;
-
-function getWiz() {
-  const wiz = globalThis.WIZ_global_data;
-  if (!wiz?.SNlM0e) throw new Error("Gemini session tokens not found — reload page");
-  return {
-    at: wiz.SNlM0e,
-    bl: wiz.cfb2h || "",
-    sid: String(wiz.FdrFJe || ""),
-  };
-}
 
 function normalizeGeminiId(id) {
   if (!id) return null;
   return id.startsWith("c_") ? id : `c_${id}`;
-}
-
-function parseBatchText(text) {
-  for (const line of text.split("\n")) {
-    if (!line.startsWith("[")) continue;
-    try {
-      return JSON.parse(line);
-    } catch {
-      /* next */
-    }
-  }
-  throw new Error("Invalid Gemini batch response");
-}
-
-async function batchExecute(rpcid, payloadArray, fetchFn) {
-  const { at, bl, sid } = getWiz();
-  const reqId = Math.floor(Math.random() * 900000) + 100000;
-  const url =
-    `${BATCH_URL}?rpcids=${encodeURIComponent(rpcid)}&source-path=%2Fapp` +
-    `&bl=${encodeURIComponent(bl)}&f.sid=${encodeURIComponent(sid)}` +
-    `&hl=en&_reqid=${reqId}&rt=c`;
-
-  const fReq = JSON.stringify([[ [rpcid, JSON.stringify(payloadArray), null, "generic"] ]]);
-  const body = `f.req=${encodeURIComponent(fReq)}&at=${encodeURIComponent(at)}`;
-
-  const response = await fetchFn(url, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      "X-Same-Domain": "1",
-    },
-    body,
-  });
-
-  if (!response.ok) throw new Error(`batchexecute HTTP ${response.status}`);
-  return parseBatchText(await response.text());
 }
 
 function extractChatIdsFromBatch(data) {
@@ -88,11 +41,11 @@ function listChatIdsFromDom() {
   return [...ids];
 }
 
-async function listChatIds(fetchFn) {
+async function listChatIds() {
   const payloads = [50, 100, 25];
   for (const size of payloads) {
     try {
-      const data = await batchExecute("MaZiqc", [size], fetchFn);
+      const data = await geminiBatchInPage("MaZiqc", [size]);
       const fromApi = extractChatIdsFromBatch(data);
       if (fromApi.length) return fromApi;
     } catch {
@@ -102,27 +55,42 @@ async function listChatIds(fetchFn) {
   return listChatIdsFromDom();
 }
 
-async function deleteChatId(cid, fetchFn) {
-  const id = normalizeGeminiId(cid);
-  await batchExecute("GzXR5e", [id], fetchFn);
+async function countChats() {
   try {
-    await batchExecute("GzXR5e", [id, [1, null, 0, 1]], fetchFn);
+    return (await listChatIds()).length;
+  } catch {
+    return listChatIdsFromDom().length;
+  }
+}
+
+async function deleteChatId(cid) {
+  const id = normalizeGeminiId(cid);
+  await geminiBatchInPage("GzXR5e", [id]);
+  try {
+    await geminiBatchInPage("GzXR5e", [id, [1, null, 0, 1]]);
   } catch {
     /* optional second RPC */
   }
 }
 
-async function deleteAllApi(fetchFn, onProgress, delayMs) {
-  const ids = await listChatIds(fetchFn);
-  if (!ids.length) return { deleted: 0, total: 0 };
+async function deleteAllApi(onProgress, delayMs) {
+  const ids = await listChatIds();
+  if (!ids.length) {
+    const domCount = listChatIdsFromDom().length;
+    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
+    return { deleted: 0, total: 0 };
+  }
 
-  return runDeleteLoop({
+  const result = await runDeleteLoop({
     ids,
     delayMs,
     label: "chat",
     onProgress,
-    deleteOne: (id) => deleteChatId(id, fetchFn),
+    deleteOne: (id) => deleteChatId(id),
   });
+
+  await assertRemaining(countChats, 0, "Gemini chats");
+  return result;
 }
 
 async function deleteAllDom() {
@@ -161,7 +129,7 @@ export const geminiProvider = {
         {
           name: "api-batchexecute",
           step: null,
-          fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+          fn: () => deleteAllApi(ctx.onProgress, ctx.delayMs),
         },
         { name: "dom-sidebar", step: "dom-sidebar", fn: deleteAllDom },
       ],

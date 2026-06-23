@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
@@ -91,9 +91,15 @@ function solidPng(width, height, r, g, b) {
 
 function writeIcons(dir) {
   mkdirSync(join(dir, "icons"), { recursive: true });
-  // ACC brand color #d97757
+  const srcIcons = join(root, "src", "icons");
   for (const size of [16, 48, 128]) {
-    writeFileSync(join(dir, "icons", `icon-${size}.png`), solidPng(size, size, 217, 119, 87));
+    const src = join(srcIcons, `icon-${size}.png`);
+    const dest = join(dir, "icons", `icon-${size}.png`);
+    if (existsSync(src)) {
+      copyFileSync(src, dest);
+    } else {
+      writeFileSync(dest, solidPng(size, size, 217, 119, 87));
+    }
   }
 }
 
@@ -105,6 +111,7 @@ async function buildExtension({ id, manifest, zip, xpi, readme }) {
   await bundle(join(root, "src/content.js"), join(out, "content.js"));
   await bundle(join(root, "src/background.js"), join(out, "background.js"));
   await bundle(join(root, "src/popup/popup.js"), join(out, "popup/popup.js"));
+  copyFileSync(join(root, "src/page-main.js"), join(out, "page-main.js"));
 
   copyFileSync(join(root, "src/popup/popup.html"), join(out, "popup/popup.html"));
   copyFileSync(join(root, "src/popup/popup.css"), join(out, "popup/popup.css"));

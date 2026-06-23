@@ -28,6 +28,15 @@ export async function tryMethods(methods, ctx) {
   throw new Error(errors.join(" | "));
 }
 
+/** Reject if more than maxRemaining items still exist after a delete attempt. */
+export async function assertRemaining(countFn, maxRemaining = 0, label = "chats") {
+  const remaining = await countFn();
+  if (remaining > maxRemaining) {
+    throw new Error(`${remaining} ${label} still remain after delete`);
+  }
+  return remaining;
+}
+
 export async function runDeleteLoop({
   ids,
   deleteOne,

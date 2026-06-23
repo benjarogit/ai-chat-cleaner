@@ -6,7 +6,7 @@ For Mozilla AMO reviewers. Extension JS is bundled with **esbuild** (not minifie
 
 https://github.com/benjarogit/claudedeleter
 
-Tag **v1.3.1** matches the submitted XPI/ZIP.
+Tag **v1.3.2** matches the submitted XPI/ZIP.
 
 ## Build environment
 
@@ -20,7 +20,7 @@ Tag **v1.3.1** matches the submitted XPI/ZIP.
 ```bash
 git clone https://github.com/benjarogit/claudedeleter.git
 cd claudedeleter
-git checkout v1.3.1
+git checkout v1.3.2
 npm ci
 npm run build
 ```
@@ -53,7 +53,8 @@ Expected: **no differences** (except possibly zip metadata).
 | `src/popup/popup.js` | `dist/firefox/popup/popup.js` |
 | `manifests/firefox.json` | `dist/firefox/manifest.json` |
 | `src/popup/popup.html`, `src/popup/popup.css` | copied as-is |
-| Icons | generated in `scripts/build.mjs` (pure Node PNG, no ImageMagick) |
+| `src/page-main.js` | `dist/firefox/page-main.js` (Gemini MAIN world) |
+| `src/icons/icon-*.png` | `dist/firefox/icons/` (copied; fallback: Node PNG in build script) |
 
 Bundler: **esbuild** v0.25.x (open source, runs locally via `npm ci`).
 

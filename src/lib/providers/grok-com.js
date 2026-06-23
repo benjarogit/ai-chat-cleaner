@@ -6,10 +6,15 @@ import {
   findByKeywords,
   KW,
 } from "../dom.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { assertRemaining, report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
 
 const ORIGIN = "https://grok.com";
 const API = `${ORIGIN}/rest/app-chat/conversations`;
+
+function parseConversationList(data) {
+  if (Array.isArray(data)) return data;
+  return data.conversations || data.items || data.data?.conversations || [];
+}
 
 async function listConversationIds(fetchFn) {
   const response = await fetchFn(API, {
@@ -19,25 +24,42 @@ async function listConversationIds(fetchFn) {
   if (!response.ok) throw new Error(`list HTTP ${response.status}`);
 
   const data = await response.json();
-  const list = data.conversations || data.items || (Array.isArray(data) ? data : []);
+  const list = parseConversationList(data);
   return list.map((c) => c.conversationId || c.id).filter(Boolean);
 }
 
+async function countConversations(fetchFn) {
+  try {
+    return (await listConversationIds(fetchFn)).length;
+  } catch {
+    return document.querySelectorAll('a[href*="/c/"]').length;
+  }
+}
+
 async function deleteAllBulk(fetchFn) {
+  const before = await countConversations(fetchFn);
+  if (!before) {
+    const domCount = document.querySelectorAll('a[href*="/c/"]').length;
+    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
+    return { deleted: 0, total: 0 };
+  }
+
   const response = await fetchFn(API, {
     method: "DELETE",
     credentials: "include",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error(`bulk delete HTTP ${response.status}`);
-  return { deleted: "all", total: "all" };
+
+  await assertRemaining(() => countConversations(fetchFn), 0, "Grok.com chats");
+  return { deleted: before, total: before };
 }
 
 async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
   const ids = await listConversationIds(fetchFn);
   if (!ids.length) return { deleted: 0, total: 0 };
 
-  return runDeleteLoop({
+  const result = await runDeleteLoop({
     ids,
     delayMs,
     label: "chat",
@@ -51,6 +73,9 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
       if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
     },
   });
+
+  await assertRemaining(() => countConversations(fetchFn), 0, "Grok.com chats");
+  return result;
 }
 
 async function deleteViaChatHeaderMenu() {
