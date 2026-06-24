@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Releases & downloads
+    url: https://github.com/benjarogit/claudedeleter/releases
+    about: Chrome, Edge, Firefox (.xpi), console script
+  - name: Firefox Add-ons
+    url: https://addons.mozilla.org/firefox/addon/ai-chat-cleaner1/
+    about: Official AMO listing

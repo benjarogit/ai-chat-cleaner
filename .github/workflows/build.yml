@@ -83,5 +83,4 @@ jobs:
             dist/CONSOLE-README.txt
             dist/AMO-README.txt
             dist/MOBILE-README.txt
-            dist/SAFARI-README.txt
           overwrite_files: true

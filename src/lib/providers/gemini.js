@@ -16,7 +16,7 @@ import {
 } from "../dom.js";
 import { geminiBatchInPage } from "../gemini-page.js";
 import { navigateTo } from "../navigate.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { report, runDeleteLoop, sleep } from "../shared.js";
 
 const GEMINI_ORIGIN = "https://gemini.google.com";
 const MYACTIVITY_URL = "https://myactivity.google.com/product/gemini?utm_source=gemini";
@@ -228,6 +228,7 @@ async function deleteMyActivityDom(ctx) {
       step: "myactivity-delete",
       method: "dom-myactivity",
       tabId: ctx.tabId,
+      methodIndex: ctx.methodIndex,
     });
   }
 
@@ -289,53 +290,6 @@ function geminiHasSidebarTargets() {
   );
 }
 
-function buildGeminiMethods(ctx) {
-  const onGemini = location.hostname === "gemini.google.com";
-  const onMyActivity =
-    location.hostname === "myactivity.google.com" && location.pathname.includes("/product/gemini");
-
-  if (ctx.step === "myactivity-delete" || onMyActivity) {
-    return [
-      { name: "dom-myactivity", step: "myactivity-delete", fn: () => deleteMyActivityDom(ctx) },
-    ];
-  }
-
-  const methods = [];
-
-  if (onGemini && geminiHasSidebarTargets()) {
-    methods.push({
-      name: "dom-sidebar",
-      step: null,
-      fn: async () => {
-        const r = await deleteSidebarMenus(ctx.onProgress);
-        await assertGeminiGone();
-        return r;
-      },
-    });
-  }
-
-  methods.push({
-    name: "api-batchexecute",
-    step: null,
-    fn: () => {
-      report(ctx.onProgress, {
-        type: "status",
-        message: "Gemini: deleting via API…",
-        overall: 12,
-      });
-      return deleteAllApi(ctx.onProgress, ctx.delayMs);
-    },
-  });
-
-  methods.push({
-    name: "dom-myactivity",
-    step: "myactivity-delete",
-    fn: () => deleteMyActivityDom(ctx),
-  });
-
-  return methods;
-}
-
 export const geminiProvider = {
   id: "gemini",
   name: "Gemini",
@@ -349,16 +303,48 @@ export const geminiProvider = {
     }
   },
 
-  async deleteAll(ctx) {
-    report(ctx.onProgress, { type: "status", message: "Gemini: starting…", overall: 5 });
+  /** Best first: sidebar ⋮ → API batchexecute → My Activity bulk */
+  async getDeleteMethods(ctx) {
+    const onGemini = location.hostname === "gemini.google.com";
+    const onMyActivity =
+      location.hostname === "myactivity.google.com" && location.pathname.includes("/product/gemini");
 
-    if (ctx.step === "myactivity-delete") {
-      return { ...(await deleteMyActivityDom(ctx)), method: "dom-myactivity", provider: "gemini" };
+    if (ctx.step === "myactivity-delete" || onMyActivity) {
+      return [
+        { name: "dom-myactivity", step: "myactivity-delete", fn: () => deleteMyActivityDom(ctx) },
+      ];
     }
 
-    const result = await tryMethods(buildGeminiMethods(ctx), ctx);
+    const methods = [];
 
-    return { ...result, provider: "gemini" };
+    if (onGemini && geminiHasSidebarTargets()) {
+      methods.push({
+        name: "dom-sidebar",
+        step: null,
+        fn: () => deleteSidebarMenus(ctx.onProgress),
+      });
+    }
+
+    methods.push({
+      name: "api-batchexecute",
+      step: null,
+      fn: () => {
+        report(ctx.onProgress, {
+          type: "status",
+          message: "Gemini: deleting via API…",
+          overall: 12,
+        });
+        return deleteAllApi(ctx.onProgress, ctx.delayMs);
+      },
+    });
+
+    methods.push({
+      name: "dom-myactivity",
+      step: "myactivity-delete",
+      fn: () => deleteMyActivityDom(ctx),
+    });
+
+    return methods;
   },
 
   async verifyGone(ctx) {

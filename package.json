@@ -1,6 +1,6 @@
 {
   "name": "ai-chat-cleaner",
-  "version": "1.4.5",
+  "version": "2.0.0",
   "private": true,
   "description": "AI Chat Cleaner (ACC) — bulk-delete claude.ai conversations",
   "type": "module",

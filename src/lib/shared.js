@@ -9,35 +9,6 @@ export function report(onProgress, payload) {
   onProgress?.(payload);
 }
 
-export async function tryMethods(methods, ctx) {
-  const errors = [];
-  const startAt = ctx.step ?? null;
-
-  for (const { name, fn, step } of methods) {
-    if (startAt && step !== startAt) continue;
-
-    debugLog("method", `trying ${name}`, { method: name });
-
-    try {
-      const result = await fn(ctx);
-      debugLog("method", `${name} ok`, { method: name });
-      return { ...result, method: name };
-    } catch (error) {
-      if (error.name === "NavigationResumeError") {
-        debugLog("nav", `navigation: ${error.step}`, { method: name });
-        throw error;
-      }
-      debugLog("method-fail", `${name}: ${error.message}`, { method: name });
-      errors.push(`${name}: ${error.message}`);
-    }
-  }
-
-  if (startAt) {
-    throw new Error(`Resume step "${startAt}" failed`);
-  }
-  throw new Error(errors.join(" | "));
-}
-
 /** Reject if more than maxRemaining items still exist after a delete attempt. */
 export async function assertRemaining(countFn, maxRemaining = 0, label = "chats") {
   const remaining = await countFn();

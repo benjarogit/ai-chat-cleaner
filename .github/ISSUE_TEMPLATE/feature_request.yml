@@ -1,0 +1,26 @@
+name: Feature / new site
+description: Request support for another AI chat site or a new delete method
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: site
+    attributes:
+      label: Site URL
+      placeholder: https://example.com/chat
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should ACC do on this site?
+      placeholder: Bulk-delete all chat threads from sidebar/history
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra context
+      description: Login required? Known bulk-delete in UI? API hints from DevTools Network tab?

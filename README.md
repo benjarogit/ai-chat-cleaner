@@ -4,11 +4,11 @@
   <img src="assets/acc-logo.png" alt="AI Chat Cleaner logo" width="128" height="128">
 </p>
 
-**Bulk-delete all your AI chat history — one click, five platforms.**
+**Bulk-delete all your AI chat history — one click, 17 platforms.**
 
 [Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/claudedeleter/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
 
-Open-source browser extension (MIT). Delete every conversation on Claude, ChatGPT, Gemini, Grok, and Grok on X without clicking through each chat individually.
+Open-source browser extension (MIT). Delete every conversation on supported AI sites without clicking through each chat individually.
 
 ---
 
@@ -21,6 +21,20 @@ Open-source browser extension (MIT). Delete every conversation on Claude, ChatGP
 | Gemini | [gemini.google.com](https://gemini.google.com) |
 | Grok | [grok.com](https://grok.com) |
 | Grok on X | [x.com/i/grok](https://x.com/i/grok) |
+| DeepSeek | [chat.deepseek.com](https://chat.deepseek.com) |
+| Perplexity | [perplexity.ai](https://www.perplexity.ai) |
+| GitHub Copilot | [github.com/copilot](https://github.com/copilot) |
+| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) |
+| Mistral | [chat.mistral.ai](https://chat.mistral.ai) |
+| Pi | [pi.ai/talk](https://pi.ai/talk) |
+| Meta AI | [meta.ai](https://www.meta.ai) |
+| Poe | [poe.com](https://poe.com) |
+| Suno (clips/songs) | [suno.com](https://suno.com) |
+| Manus | [manus.im/app](https://manus.im/app) |
+| AgentGPT | [agentgpt.reworkd.ai](https://agentgpt.reworkd.ai) |
+| CrewAI | [app.crewai.com/studio](https://app.crewai.com/studio) |
+
+> **Suno** deletes library clips/songs, not chat threads. **CrewAI** deletes Studio automation projects.
 
 ---
 
@@ -28,35 +42,32 @@ Open-source browser extension (MIT). Delete every conversation on Claude, ChatGP
 
 ### Firefox (desktop & Android)
 
-Three ways to install — pick what fits you:
-
 | Method | Best for | Link |
 |--------|----------|------|
-| **Add-ons for Firefox (AMO)** | Most users — auto-updates, one click | [Install on AMO](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) |
-| **GitHub Release (.xpi)** | Sideloading without the store | [acc-firefox.xpi](https://github.com/benjarogit/claudedeleter/releases/latest) |
-| **Load unpacked** | Developers / testing latest `main` | `npm ci && npm run build` → load `dist/firefox/` in `about:debugging` |
+| **Add-ons for Firefox (AMO)** | Most users — auto-updates | [Install on AMO](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) |
+| **GitHub Release (.xpi)** | Sideloading | [acc-firefox.xpi](https://github.com/benjarogit/claudedeleter/releases/latest) |
+| **Load unpacked** | Developers | `npm ci && npm run build` → `dist/firefox/` in `about:debugging` |
 
-> **AMO note:** If the store page is not live yet, the add-on is still in review — use the `.xpi` from Releases or load unpacked in the meantime.
-
-**Android:** Install from AMO in Firefox for Android, or sideload the `.xpi` (Settings → Add-ons → gear icon → Install from file).
+**Android:** Install from AMO or sideload the `.xpi`.
 
 ### Chrome / Edge
 
-1. Download [`acc-chrome.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) (Chrome) or [`acc-edge.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) (Edge).
-2. Unzip, open `chrome://extensions` or `edge://extensions`.
-3. Enable **Developer mode** → **Load unpacked** → select the extracted folder.
+1. Download [`acc-chrome.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) or [`acc-edge.zip`](https://github.com/benjarogit/claudedeleter/releases/latest).
+2. Unzip → `chrome://extensions` or `edge://extensions` → **Developer mode** → **Load unpacked**.
 
 ### Without an extension (bookmarklet / console)
 
-Paste [`acc-console.js`](https://github.com/benjarogit/claudedeleter/releases/latest) into the DevTools console on a supported site, or use `dist/bookmarklet.txt` as a bookmark URL.
+Paste [`acc-console.js`](https://github.com/benjarogit/claudedeleter/releases/latest) into DevTools on a supported site, or use `dist/bookmarklet.txt`.
+
+GitHub Copilot works via console/bookmarklet (iframe fetch bypass) — no extension required.
 
 ---
 
 ## Usage
 
 1. Open a supported site and **log in**.
-2. Click the **ACC** toolbar icon → **Delete all chats** → confirm.
-3. Keep the tab open until the progress bar finishes (some fallbacks navigate to settings pages).
+2. Click **ACC** → **Delete all chats** → confirm.
+3. Keep the tab open until the progress bar finishes.
 
 ---
 
@@ -66,21 +77,30 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 
 | Platform | Primary | Fallback |
 |----------|---------|----------|
-| Claude | REST API (`DELETE` per chat) | Sidebar trash |
-| ChatGPT | Datenkontrollen → **Alle löschen** (bulk) | Per-chat API → Sidebar ⋮ |
-| Gemini | [My Activity](https://myactivity.google.com/product/gemini) → **Gesamte Zeit** | `batchexecute` API → Sidebar ⋮ |
-| Grok.com | `DELETE /rest/app-chat/conversations` | History UI (Mehr → Löschen) |
-| Grok on X | GraphQL delete (when op found in page) | Chatverlauf → Mehr → Delete |
-
-Universal DE/EN UI keywords (Verlauf, Chatverlauf, Einstellungen, …) so fallbacks work regardless of interface language.
+| Claude | Recents bulk select → API | Overflow menu |
+| ChatGPT | Settings bulk delete | Per-chat API → Sidebar |
+| Gemini | Sidebar | batchexecute API → My Activity |
+| Grok.com | Bulk API | Individual API → History UI |
+| Grok on X | History DOM | GraphQL → Settings |
+| DeepSeek | Bulk API | Individual API → Sidebar |
+| Perplexity | Individual API | Sidebar Session actions |
+| GitHub Copilot | Bulk API | Individual API → Manage chat |
+| Microsoft Copilot | Individual API | Sidebar |
+| Mistral | tRPC chat.delete | Sidebar |
+| Pi | REST DELETE | Conversation options |
+| Meta AI | Sidebar More options | — |
+| Poe | Sidebar | — |
+| Suno | Clip API | Library menu |
+| Manus | Connect-RPC DeleteSession | Sidebar |
+| AgentGPT | Sidebar | — |
+| CrewAI | DELETE projects | Studio menu |
 
 ---
 
 ## Privacy
 
-- **No data collection** — nothing is sent to the developer (`data_collection_permissions: none` on Firefox).
+- **No data collection** — nothing is sent to the developer.
 - Deletions run **only in your browser** on the respective sites.
-- No account or signup with us.
 
 ---
 
@@ -92,13 +112,13 @@ cd claudedeleter
 npm ci && npm run build
 ```
 
-Artifacts land in `dist/`: `acc-firefox.zip`, `acc-firefox.xpi`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`.
+Artifacts in `dist/`: `acc-firefox.zip`, `acc-firefox.xpi`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`.
 
 ---
 
 ## Credits
 
-Fork of [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), extended and maintained by **[Sunny C.](https://sunnyc.de)**.
+Fork of [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), extended by **[Sunny C.](https://sunnyc.de)**.
 
 ## License
 

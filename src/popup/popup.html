@@ -11,7 +11,7 @@
     <img src="../icons/icon-48.png" width="40" height="40" alt="" />
     <div class="header-text">
       <h1>AI Chat Cleaner</h1>
-      <p class="subtitle">Bulk-delete chats on Claude, ChatGPT, Gemini &amp; Grok</p>
+      <p class="subtitle" id="subtitle">Bulk-delete AI chat history</p>
     </div>
   </header>
 
@@ -27,6 +27,7 @@
     <p id="error" class="error" hidden></p>
     <div id="debugActions" class="debug-actions" hidden>
       <button id="copyDebug" type="button" class="secondary">Copy debug report</button>
+      <button id="reportGithub" type="button" class="secondary">Report on GitHub</button>
       <p class="debug-hint">Safe to share — tokens, emails &amp; chat IDs are redacted.</p>
     </div>
     <div id="log" class="log" aria-live="polite"></div>
@@ -43,6 +44,8 @@
 
   <footer>
     <a href="https://sunnyc.de" target="_blank" rel="noopener">Sunny C.</a>
+    ·
+    <a href="https://github.com/benjarogit/claudedeleter/issues/new?template=feature_request.yml" target="_blank" rel="noopener">Ideas</a>
     ·
     <a href="https://github.com/benjarogit/claudedeleter" target="_blank" rel="noopener">GitHub</a>
   </footer>

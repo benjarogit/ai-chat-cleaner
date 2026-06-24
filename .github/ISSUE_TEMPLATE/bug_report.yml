@@ -1,0 +1,79 @@
+name: Bug report
+description: Something failed while deleting chats (attach debug report from the extension popup)
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    value: |
+      Use **Copy debug report** or **Report on GitHub** in the extension popup before submitting.
+      The report is redacted (no tokens, emails, or chat IDs).
+
+  - type: textarea
+    id: debug_report
+    attributes:
+      label: Debug report
+      description: Paste the full report from the popup (required for triage)
+      placeholder: "=== AI Chat Cleaner — debug report (redacted) ==="
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Claude (claude.ai)
+        - ChatGPT (chatgpt.com)
+        - Gemini (gemini.google.com)
+        - Grok (grok.com)
+        - Grok on X (x.com/i/grok)
+        - DeepSeek (chat.deepseek.com)
+        - Perplexity (perplexity.ai)
+        - GitHub Copilot (github.com/copilot)
+        - Microsoft Copilot (copilot.microsoft.com)
+        - Mistral (chat.mistral.ai)
+        - Pi (pi.ai)
+        - Meta AI (meta.ai)
+        - Poe (poe.com)
+        - Suno (suno.com — clips/songs)
+        - Manus (manus.im)
+        - AgentGPT (agentgpt.reworkd.ai)
+        - CrewAI (app.crewai.com)
+        - Other / not listed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: How you ran ACC
+      options:
+        - Firefox extension
+        - Chrome extension
+        - Edge extension
+        - Console script / bookmarklet (no extension)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open … 2. Click Delete all …"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+    validations:
+      required: true

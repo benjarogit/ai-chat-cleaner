@@ -8,7 +8,7 @@ import {
   isClaudeRecentsSelectMode,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { report, runDeleteLoop, sleep } from "../shared.js";
 
 const ORIGIN = "https://claude.ai";
 
@@ -116,6 +116,7 @@ async function deleteRecentsBulk(ctx) {
       step: "dom-recents",
       method: "dom-recents",
       tabId: ctx.tabId,
+      methodIndex: ctx.methodIndex,
     });
   }
 
@@ -164,26 +165,13 @@ export const claudeProvider = {
     }
   },
 
-  async deleteAll(ctx) {
-    report(ctx.onProgress, { type: "status", message: "Claude: starting…", overall: 5 });
-
-    if (ctx.step === "dom-recents") {
-      return { ...(await deleteRecentsBulk(ctx)), method: "dom-recents", provider: "claude" };
-    }
-    if (ctx.step === "dom-overflow") {
-      return { ...(await deleteViaOverflow(ctx)), method: "dom-overflow", provider: "claude" };
-    }
-
-    const result = await tryMethods(
-      [
-        { name: "dom-recents", step: "dom-recents", fn: () => deleteRecentsBulk(ctx) },
-        { name: "api", step: null, fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
-        { name: "dom-overflow", step: "dom-overflow", fn: () => deleteViaOverflow(ctx) },
-      ],
-      ctx
-    );
-
-    return { ...result, provider: "claude" };
+  /** Best first: recents bulk → API → overflow menus */
+  async getDeleteMethods(ctx) {
+    return [
+      { name: "dom-recents", step: "dom-recents", fn: () => deleteRecentsBulk(ctx) },
+      { name: "api", step: null, fn: () => deleteAllApi(ctx.fetchFn, ctx.onProgress, ctx.delayMs) },
+      { name: "dom-overflow", step: "dom-overflow", fn: () => deleteViaOverflow(ctx) },
+    ];
   },
 
   async verifyGone(ctx) {

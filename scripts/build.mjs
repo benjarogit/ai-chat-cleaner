@@ -159,7 +159,7 @@ async function buildConsole() {
     join(dist, "CONSOLE-README.txt"),
     [
       "AI Chat Cleaner — console script (no extension)",
-      "Supported: claude.ai, chatgpt.com, gemini.google.com, grok.com, x.com/i/grok",
+      "Supported: claude.ai, chatgpt.com, gemini.google.com, grok.com, x.com/i/grok, chat.deepseek.com, perplexity.ai, github.com/copilot",
       "2. Open DevTools → Console",
       "3. Paste acc-console.js and press Enter",
       "",
@@ -215,17 +215,6 @@ async function main() {
       "",
       "On Firefox Android: install from AMO after approval, open claude.ai,",
       "tap the ACC icon in the browser menu.",
-    ].join("\n") + "\n"
-  );
-
-  writeFileSync(
-    join(dist, "SAFARI-README.txt"),
-    [
-      "Safari Web Extension (macOS):",
-      "1. npm run build",
-      "2. xcrun safari-web-extension-converter dist/chrome --app-name 'AI Chat Cleaner'",
-      "3. Xcode: set Signing Team, build & run",
-      "4. Safari → Settings → Extensions → enable ACC",
     ].join("\n") + "\n"
   );
 

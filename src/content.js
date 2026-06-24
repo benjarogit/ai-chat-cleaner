@@ -56,7 +56,9 @@ async function runDelete(options = {}) {
       const msg =
         error.step === "verify"
           ? "Refreshing page to verify deletion…"
-          : "Navigating… will continue automatically.";
+          : error.step === "continue-delete"
+            ? "Verify failed — trying next delete method…"
+            : "Navigating… will continue automatically.";
       debugLog("nav", msg, { step: error.step });
       sendRuntimeMessage({
         action: "updateProgress",

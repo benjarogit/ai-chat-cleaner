@@ -11,13 +11,9 @@ export class NavigationResumeError extends Error {
   }
 }
 
-export async function setPending({ providerId, step, method, tabId, result }) {
+export async function setPending(pending) {
   await pendingSet({
-    providerId,
-    step,
-    method,
-    tabId,
-    result,
+    ...pending,
     at: Date.now(),
   });
 }

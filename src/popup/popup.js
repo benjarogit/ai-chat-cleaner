@@ -11,6 +11,9 @@ const errorEl = $("error");
 const logEl = $("log");
 const debugActions = $("debugActions");
 const copyDebugBtn = $("copyDebug");
+const reportGithubBtn = $("reportGithub");
+const GITHUB_BUG_URL =
+  "https://github.com/benjarogit/claudedeleter/issues/new?template=bug_report.yml&labels=bug";
 const overallBar = $("overallProgress");
 const currentBar = $("currentProgress");
 const overallText = $("overallProgressText");
@@ -71,7 +74,7 @@ function hideDebugActions() {
   debugActions.classList.remove("copied");
 }
 
-async function copyDebugReport() {
+async function gatherDebugReport() {
   let report = lastDebugReport;
   if (!report) {
     const tab = await getActiveTab();
@@ -88,13 +91,31 @@ async function copyDebugReport() {
   if (!report) {
     report = buildPopupDebugReport(errorEl.textContent || undefined);
   }
+  return report;
+}
 
+async function copyDebugReport() {
+  const report = await gatherDebugReport();
   try {
     await navigator.clipboard.writeText(report);
     debugActions.classList.add("copied");
     addLog("Debug report copied to clipboard.");
+    return report;
   } catch {
     addLog("Clipboard failed — select text from console or try again.");
+    return report;
+  }
+}
+
+async function reportOnGitHub() {
+  const report = await copyDebugReport();
+  const body = encodeURIComponent(report.slice(0, 6500));
+  const url = `${GITHUB_BUG_URL}&body=${body}`;
+  try {
+    await ext.tabs.create({ url });
+    addLog("Opened GitHub issue form (report in body + clipboard).");
+  } catch {
+    window.open(url, "_blank", "noopener");
   }
 }
 
@@ -145,6 +166,7 @@ async function init() {
 
   deleteButton.disabled = false;
   status.textContent = `Ready on ${provider.name}.`;
+  $("subtitle").textContent = supportedSitesLabel();
   addLog(`Ready (${provider.id}).`);
 }
 
@@ -161,6 +183,10 @@ confirmNo.addEventListener("click", () => {
 
 copyDebugBtn.addEventListener("click", () => {
   copyDebugReport();
+});
+
+reportGithubBtn.addEventListener("click", () => {
+  reportOnGitHub();
 });
 
 confirmYes.addEventListener("click", async () => {

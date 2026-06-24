@@ -696,3 +696,458 @@ export function findGrokComSidebarOptionsButton(row) {
     }) ?? null
   );
 }
+
+/** Live deepseek.com: /a/chat/s/{uuid} sidebar links. */
+export function findDeepseekSidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/a/chat/s/"]')) {
+    const match = a.href.match(/\/a\/chat\/s\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countDeepseekSidebarChats(root = document) {
+  return findDeepseekSidebarChatLinks(root).length;
+}
+
+function wakeDeepseekSidebarRowMenu(link) {
+  if (!link) return null;
+  link.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+  link.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
+  return link.querySelector('[role="button"]') ?? null;
+}
+
+/** Sidebar row ⋯ → Delete → confirm (live-tested). */
+export async function deleteDeepseekViaSidebar({ max = 120, delayMs = 500 } = {}) {
+  let deleted = 0;
+  for (let i = 0; i < max; i++) {
+    const links = findDeepseekSidebarChatLinks();
+    if (!links.length) break;
+
+    const menuBtn = wakeDeepseekSidebarRowMenu(links[0]);
+    await sleep(180);
+    if (!menuBtn) break;
+
+    menuBtn.click();
+    await sleep(320);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(320);
+    await confirmDialogs();
+    deleted++;
+    await sleep(delayMs);
+  }
+  return deleted;
+}
+
+/** Live perplexity.ai: /search/{uuid} history links. */
+export function findPerplexitySidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/search/"]')) {
+    const match = a.href.match(/\/search\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countPerplexitySidebarChats(root = document) {
+  return findPerplexitySidebarChatLinks(root).length;
+}
+
+/** Sidebar row → Session actions → Delete → confirm (live-tested). */
+export async function deletePerplexityViaSessionActions({ max = 120, delayMs = 500 } = {}) {
+  let deleted = 0;
+  for (let i = 0; i < max; i++) {
+    const links = findPerplexitySidebarChatLinks();
+    if (!links.length) break;
+
+    links[0].click();
+    await sleep(450);
+
+    const actions =
+      queryClickables().find((el) => /session actions/i.test(elementText(el))) ?? null;
+    if (!actions) break;
+
+    actions.click();
+    await sleep(300);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    await sleep(delayMs);
+  }
+  return deleted;
+}
+
+/** Live github.com/copilot: /copilot/c/{uuid} sidebar links. */
+export function findCopilotGithubChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/copilot/c/"]')) {
+    const match = a.href.match(/\/copilot\/c\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countCopilotGithubSidebarChats(root = document) {
+  return findCopilotGithubChatLinks(root).length;
+}
+
+const COPILOT_SKIP_MENU =
+  /^(new chat|share chat|toggle sidebar|close sidebar|ask|send now|open workbench|scroll to|edit message|good response|bad response|copy to|retry|model:|more editors|benjarogit)/i;
+
+function findCopilotChatMenuButton() {
+  const manage =
+    findToolbarButton(["manage chat"]) ??
+    queryClickables().find((el) => /manage chat/i.test(elementText(el))) ??
+    null;
+  if (manage) return manage;
+
+  if (!location.pathname.includes("/copilot/c/")) return null;
+
+  return (
+    queryVisible("button").find((b) => {
+      const label = (b.getAttribute("aria-label") || b.textContent || "").trim();
+      if (!label || COPILOT_SKIP_MENU.test(label)) return false;
+      const current = b.getAttribute("aria-current");
+      return current === "page" || current === "true";
+    }) ?? null
+  );
+}
+
+/** Manage chat / chat-title menu → Delete → confirm (live-tested). */
+export async function deleteCopilotGithubViaManageChat({ max = 100, delayMs = 500 } = {}) {
+  let deleted = 0;
+  for (let i = 0; i < max; i++) {
+    const links = findCopilotGithubChatLinks();
+    if (!links.length) break;
+
+    links[0].click();
+    await sleep(600);
+
+    const menuBtn = findCopilotChatMenuButton();
+    if (!menuBtn) break;
+
+    menuBtn.click();
+    await sleep(350);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(350);
+    await confirmDialogs();
+    deleted++;
+    await sleep(delayMs);
+  }
+  return deleted;
+}
+
+/** Generic sidebar delete: open first link → overflow → Delete. */
+async function deleteViaSidebarMenu({
+  findLinks,
+  openMenu,
+  max = 100,
+  delayMs = 500,
+} = {}) {
+  let deleted = 0;
+  for (let i = 0; i < max; i++) {
+    const links = findLinks();
+    if (!links.length) break;
+
+    links[0].click();
+    await sleep(500);
+
+    const opened = openMenu ? await openMenu(links[0]) : true;
+    if (!opened) break;
+
+    await sleep(350);
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    await sleep(delayMs);
+  }
+  return deleted;
+}
+
+export function findCopilotMicrosoftChatLinks(root = document) {
+  const links = [];
+  const seen = new Set();
+  for (const a of root.querySelectorAll('a[href*="/chats/"], a[href*="/c/"]')) {
+    const href = a.href;
+    if (!href.includes("copilot.microsoft.com") || seen.has(href) || !isVisible(a)) continue;
+    seen.add(href);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countCopilotMicrosoftSidebarChats(root = document) {
+  return findCopilotMicrosoftChatLinks(root).length;
+}
+
+export async function deleteCopilotMicrosoftViaSidebar(onProgress) {
+  return deleteViaSidebarMenu({
+    findLinks: findCopilotMicrosoftChatLinks,
+    openMenu: () => {
+      const btn =
+        findToolbarButton(["conversation actions", "more options", "chat options"]) ??
+        queryClickables().find((el) => /more options|conversation actions/i.test(elementText(el)));
+      btn?.click();
+      return !!btn;
+    },
+  });
+}
+
+export function findMistralSidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/chat/"]')) {
+    const match = a.href.match(/\/chat\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countMistralSidebarChats(root = document) {
+  return findMistralSidebarChatLinks(root).length;
+}
+
+export async function deleteMistralViaSidebar(onProgress) {
+  return deleteViaSidebarMenu({
+    findLinks: findMistralSidebarChatLinks,
+    openMenu: (link) => {
+      const row = link.closest("li") || link.parentElement;
+      const btn =
+        row?.querySelector('button[aria-label*="More"], button[aria-label*="options"]') ??
+        queryClickables(row).find((el) => /^⋯|more$/i.test(elementText(el)));
+      btn?.click();
+      return !!btn;
+    },
+  });
+}
+
+export function findPiSidebarChatLinks(root = document) {
+  const links = [];
+  const seen = new Set();
+  for (const btn of root.querySelectorAll('button[aria-label*="chat"], a[href*="/talk"]')) {
+    const label = btn.getAttribute("aria-label") || btn.textContent || "";
+    if (!label || seen.has(label) || !isVisible(btn)) continue;
+    if (/new chat/i.test(label)) continue;
+    seen.add(label);
+    links.push(btn);
+  }
+  return links;
+}
+
+export function countPiSidebarChats(root = document) {
+  return findPiSidebarChatLinks(root).length;
+}
+
+export async function deletePiViaConversationOptions(onProgress) {
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const opts = findByAriaIncludes("Conversation options");
+    if (!opts) break;
+
+    opts.click();
+    await sleep(350);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    await sleep(500);
+  }
+  return deleted;
+}
+
+export function findMetaAiSidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/prompt/"]')) {
+    const match = a.href.match(/\/prompt\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countMetaAiSidebarChats(root = document) {
+  return findMetaAiSidebarChatLinks(root).length;
+}
+
+export async function deleteMetaAiViaMoreOptions(onProgress) {
+  return deleteViaSidebarMenu({
+    findLinks: findMetaAiSidebarChatLinks,
+    openMenu: () => {
+      const btn =
+        findByAriaIncludes("More options") ??
+        queryClickables().find((el) => /more options/i.test(elementText(el)));
+      btn?.click();
+      return !!btn;
+    },
+  });
+}
+
+export function findPoeSidebarChatLinks(root = document) {
+  const seen = new Set();
+  const links = [];
+  for (const a of root.querySelectorAll('a[href*="/chat/"], a[href*="poe.com/"]')) {
+    const href = a.href;
+    if (!href.includes("poe.com") || seen.has(href) || !isVisible(a)) continue;
+    if (/\/bots?\//i.test(href) && !/\/chat\//i.test(href)) continue;
+    seen.add(href);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countPoeSidebarChats(root = document) {
+  return findPoeSidebarChatLinks(root).length;
+}
+
+export async function deletePoeViaSidebar(onProgress) {
+  return deleteViaSidebarMenu({ findLinks: findPoeSidebarChatLinks });
+}
+
+export function findSunoClipElements(root = document) {
+  return [...root.querySelectorAll('[data-testid*="clip"], [class*="clip"], article')].filter(
+    (el) =>
+      isVisible(el) &&
+      el.querySelector('button[aria-label*="More"], button[aria-label*="options"]')
+  );
+}
+
+export function countSunoLibraryClips(root = document) {
+  return findSunoClipElements(root).length;
+}
+
+export async function deleteSunoViaClipMenu(onProgress) {
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const clips = findSunoClipElements();
+    if (!clips.length) break;
+
+    const more =
+      clips[0].querySelector('button[aria-label*="More"], button[aria-label*="options"]') ??
+      queryClickables(clips[0]).find((el) => /more options/i.test(elementText(el)));
+    if (!more) break;
+
+    more.click();
+    await sleep(350);
+
+    const del =
+      findOpenMenuDeleteItem() ??
+      queryClickables().find((el) => /delete|remove|trash/i.test(elementText(el)));
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    await sleep(500);
+  }
+  return deleted;
+}
+
+export function findManusSidebarSessionLinks(root = document) {
+  const links = [];
+  const seen = new Set();
+  for (const a of root.querySelectorAll('a[href*="/app/"], a[href*="/session"]')) {
+    if (seen.has(a.href) || !isVisible(a)) continue;
+    seen.add(a.href);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countManusSidebarSessions(root = document) {
+  return findManusSidebarSessionLinks(root).length;
+}
+
+export async function deleteManusViaSidebar(onProgress) {
+  return deleteViaSidebarMenu({ findLinks: findManusSidebarSessionLinks });
+}
+
+export function findAgentGptSidebarLinks(root = document) {
+  const links = [];
+  const seen = new Set();
+  for (const a of root.querySelectorAll('a[href*="/agent"], a[href*="/run"]')) {
+    if (seen.has(a.href) || !isVisible(a)) continue;
+    seen.add(a.href);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countAgentGptSidebarItems(root = document) {
+  return findAgentGptSidebarLinks(root).length;
+}
+
+export async function deleteAgentGptViaSidebar(onProgress) {
+  return deleteViaSidebarMenu({ findLinks: findAgentGptSidebarLinks });
+}
+
+export function findCrewAiProjectElements(root = document) {
+  return [...root.querySelectorAll('[data-testid*="project"], article, [class*="project"]')].filter(
+    (el) => isVisible(el)
+  );
+}
+
+export function countCrewAiProjects(root = document) {
+  return findCrewAiProjectElements(root).length;
+}
+
+export async function deleteCrewAiViaProjectMenu(onProgress) {
+  let deleted = 0;
+  for (let i = 0; i < 80; i++) {
+    const projects = findCrewAiProjectElements();
+    if (!projects.length) break;
+
+    const more =
+      projects[0].querySelector('button[aria-label*="More"], button[aria-label*="menu"]') ??
+      queryClickables(projects[0]).find((el) => /more|⋯/i.test(elementText(el)));
+    if (!more) break;
+
+    more.click();
+    await sleep(350);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    await sleep(500);
+  }
+  return deleted;
+}

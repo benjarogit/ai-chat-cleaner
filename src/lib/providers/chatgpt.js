@@ -6,7 +6,7 @@ import {
   findOpenMenuDeleteItem,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { report, runDeleteLoop, sleep } from "../shared.js";
 
 const ORIGIN = "https://chatgpt.com";
 const API = `${ORIGIN}/backend-api`;
@@ -118,6 +118,7 @@ async function deleteAllSettingsDom(ctx) {
       step: "settings-delete",
       method: "dom-settings",
       tabId: ctx.tabId,
+      methodIndex: ctx.methodIndex,
     });
   }
 
@@ -186,31 +187,21 @@ export const chatgptProvider = {
     }
   },
 
-  async deleteAll(ctx) {
-    report(ctx.onProgress, { type: "status", message: "ChatGPT: starting…", overall: 5 });
-
-    if (ctx.step === "settings-delete") {
-      return { ...(await deleteAllSettingsDom(ctx)), method: "dom-settings", provider: "chatgpt" };
-    }
-
-    const result = await tryMethods(
-      [
-        { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
-        {
-          name: "api-individual",
-          step: null,
-          fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
-        },
-        {
-          name: "dom-sidebar",
-          step: null,
-          fn: () => deleteSidebarMenus(ctx.onProgress, ctx.fetchFn),
-        },
-      ],
-      ctx
-    );
-
-    return { ...result, provider: "chatgpt" };
+  /** Best first: settings bulk → API hide → sidebar menus */
+  async getDeleteMethods(ctx) {
+    return [
+      { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
+      {
+        name: "api-individual",
+        step: null,
+        fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+      },
+      {
+        name: "dom-sidebar",
+        step: null,
+        fn: () => deleteSidebarMenus(ctx.onProgress, ctx.fetchFn),
+      },
+    ];
   },
 
   async verifyGone(ctx) {

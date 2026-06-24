@@ -10,7 +10,7 @@ import {
   findOpenMenuDeleteItem,
   KW,
 } from "../dom.js";
-import { report, runDeleteLoop, sleep, tryMethods } from "../shared.js";
+import { report, runDeleteLoop, sleep } from "../shared.js";
 
 const ORIGIN = "https://grok.com";
 const API = `${ORIGIN}/rest/app-chat/conversations`;
@@ -168,36 +168,6 @@ async function deleteHistoryDom(fetchFn, onProgress) {
   return { deleted, total: deleted };
 }
 
-/**
- * Live grok.com: API returned 0 chats while sidebar had 25 — API bulk lies on this account.
- * Pick methods based on what actually has data.
- */
-async function deleteGrokComAll(ctx) {
-  const apiIds = await listConversationIds(ctx.fetchFn);
-  const domCount = countGrokComSidebarChats();
-
-  if (!apiIds.length && !domCount) return { deleted: 0, total: 0 };
-
-  const methods = [];
-  if (apiIds.length > 0) {
-    methods.push({ name: "api-bulk", step: null, fn: () => deleteAllBulk(ctx.fetchFn) });
-    methods.push({
-      name: "api-individual",
-      step: null,
-      fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
-    });
-  }
-  if (domCount > 0) {
-    methods.push({
-      name: "dom-history",
-      step: "dom-history",
-      fn: () => deleteHistoryDom(ctx.fetchFn, ctx.onProgress),
-    });
-  }
-
-  return tryMethods(methods, ctx);
-}
-
 export const grokComProvider = {
   id: "grok-com",
   name: "Grok",
@@ -209,19 +179,33 @@ export const grokComProvider = {
     }
   },
 
-  async deleteAll(ctx) {
-    report(ctx.onProgress, { type: "status", message: "Grok.com: starting…", overall: 5 });
+  /** Best first when API has IDs: bulk → individual → DOM sidebar/history */
+  async getDeleteMethods(ctx) {
+    const apiIds = await listConversationIds(ctx.fetchFn);
+    const domCount = countGrokComSidebarChats();
 
-    if (ctx.step === "dom-history") {
-      return {
-        ...(await deleteHistoryDom(ctx.fetchFn, ctx.onProgress)),
-        method: "dom-history",
-        provider: "grok-com",
-      };
+    if (!apiIds.length && !domCount) {
+      return [{ name: "noop", step: null, fn: () => ({ deleted: 0, total: 0 }) }];
     }
 
-    const result = await deleteGrokComAll(ctx);
-    return { ...result, provider: "grok-com" };
+    const methods = [];
+    if (apiIds.length > 0) {
+      methods.push({ name: "api-bulk", step: null, fn: () => deleteAllBulk(ctx.fetchFn) });
+      methods.push({
+        name: "api-individual",
+        step: null,
+        fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
+      });
+    }
+    if (domCount > 0) {
+      methods.push({
+        name: "dom-history",
+        step: "dom-history",
+        fn: () => deleteHistoryDom(ctx.fetchFn, ctx.onProgress),
+      });
+    }
+
+    return methods;
   },
 
   async verifyGone(ctx) {

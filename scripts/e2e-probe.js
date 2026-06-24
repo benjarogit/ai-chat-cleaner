@@ -223,21 +223,17 @@
     });
 
     await test("api-find-delete-op", async () => {
-      const names = [
-        "GrokConversationDelete",
-        "DeleteGrokConversation",
-        "GrokDeleteConversation",
-        "GrokConversationRemove",
-      ];
+      const known = {
+        DeleteGrokMessage: "kaH0vdJmbuocpRAeWpRC7A",
+        GrokHistory: "9Hyh5D4-WXLnExZkONSkZg",
+      };
       for (const entry of performance.getEntriesByType("resource")) {
-        for (const name of names) {
-          if (entry.name.includes(name)) {
-            const m = entry.name.match(/graphql\/([^/]+)\//);
-            if (m) return { hash: m[1], operationName: name, from: "resource" };
-          }
+        if (entry.name.includes("DeleteGrokMessage")) {
+          const m = entry.name.match(/graphql\/([^/]+)\//);
+          if (m) return { hash: m[1], operationName: "DeleteGrokMessage", from: "resource" };
         }
       }
-      return { found: false };
+      return { found: false, fallback: known.DeleteGrokMessage };
     });
 
     await test("dom-probe", async () => {
