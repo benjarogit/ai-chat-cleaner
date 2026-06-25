@@ -1,4 +1,4 @@
-# ACC v1.0.0 — Store compliance checklist
+# ACC v1.0.1 — Store compliance checklist
 
 References:
 - [Chrome Web Store publish](https://developer.chrome.com/docs/webstore/publish?hl=de)
@@ -8,11 +8,13 @@ References:
 ## Code / manifest (pre-upload)
 
 - [x] MV3 valid manifest + ZIP/XPI build (`npm run build`)
-- [x] `assistant.kagi.com` in host_permissions + content_scripts
+- [x] All 20 provider host_permissions in chrome.json + firefox.json
 - [x] Firefox `data_collection_permissions.required: ["none"]`
 - [x] Chrome service_worker vs Firefox background.scripts (build.mjs)
 - [x] Confirm dialog before irreversible delete
 - [x] No affiliate injection; support links only in extension UI footer
+- [x] Manifest description ≤132 chars (fixed in v1.0.1)
+- [x] 32×32 and 96×96 icons present
 
 ## AMO listing text (copy when uploading)
 
@@ -32,6 +34,7 @@ References:
 
 ## Post-upload
 
-- [ ] Firefox AMO 1.0.0 submitted
-- [ ] Chrome CWS 1.0.0 submitted
-- [ ] Edge 1.0.0 submitted (if applicable)
+- [ ] Firefox AMO v1.0.1 submitted
+- [ ] Chrome CWS v1.0.1 submitted
+- [ ] Edge v1.0.1 submitted (optional)
+- [ ] GitHub Release v1.0.1 created
