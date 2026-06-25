@@ -83,15 +83,24 @@ Bei Fehlern: **Debug-Bericht kopieren** oder **Auf GitHub melden** im Popup verw
 
 ## Datenschutz
 
-- **Keine Datenerhebung** — es wird nichts automatisch an den Entwickler gesendet.
-- Löschvorgänge laufen **nur im Browser** auf den jeweiligen Seiten.
-- Debug-Berichte werden nur erstellt, wenn du einen Fehler kopierst oder meldest — sensible Werte werden lokal geschwärzt.
+ACC erhebt, speichert und überträgt **keinerlei persönliche Daten**.
+
+| Was | Details |
+|-----|---------|
+| **Datenerhebung** | Keine. Keine Analyse, kein Telemetrie, kein Tracking. |
+| **Netzwerkzugriff** | Nur auf die KI-Plattformen, die du aktiv nutzt (zum Aufruf ihrer Lösch-APIs). |
+| **Lokale Speicherung** | Nur Nutzereinstellungen (Sprache, Löschmethode). Niemals Chat-Inhalte oder Anmeldedaten. |
+| **Debug-Berichte** | Werden nur erstellt, wenn du ausdrücklich auf „Debug-Bericht kopieren" oder „Auf GitHub melden" klickst. Alle Tokens, E-Mail-Adressen, Chat-IDs und UUIDs werden lokal geschwärzt, bevor etwas angezeigt wird. |
+| **Dritte** | Es werden keine Daten an Dritte verkauft oder weitergegeben. |
+| **Open Source** | Der vollständige Quellcode ist einsehbar auf [github.com/benjarogit/ai-chat-cleaner](https://github.com/benjarogit/ai-chat-cleaner). |
+
+Verwendete Berechtigungen: `storage` (Einstellungen), `alarms` (Batchlöschung), Host-Berechtigungen für jede unterstützte Plattform (Content-Script-Injektion und API-Aufrufe).
 
 ---
 
 ## Projekt unterstützen
 
-ACC ist kostenlos und Open Source. Optionale Unterstützung hilft, 20 Plattformen aktuell zu halten:
+ACC ist kostenlos und Open Source. Optionale Unterstützung hilft, 21 Plattformen aktuell zu halten:
 
 - [Ko-fi](https://ko-fi.com/aichatcleaner) — Einmalige Unterstützung
 - [Patreon](https://www.patreon.com/SunnyCueq) — Supporter-Tier (3 €/Monat)
@@ -126,6 +135,7 @@ API-first auf jeder Plattform; DOM-Fallbacks wenn die interne API nicht verfügb
 | CrewAI | REST DELETE Projekte | Studio-Menü |
 | MiniMax | REST-API | Sidebar-DOM |
 | Z.ai | REST DELETE | Sidebar-DOM |
+|| Cursor | DOM-lesen + API-Löschen | Sidebar-DOM |
 
 ---
 

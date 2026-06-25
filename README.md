@@ -83,15 +83,24 @@ If deletion fails, use **Copy debug report** or **Report on GitHub** in the popu
 
 ## Privacy
 
-- **No data collection** — nothing is sent to the developer automatically.
-- Deletions run **only in your browser** on the respective sites.
-- Debug reports are created only when you copy or report an error, and sensitive values are redacted locally.
+ACC does **not** collect, store, or transmit any personal data.
+
+| What | Details |
+|------|---------|
+| **Data collection** | None. No analytics, no telemetry, no tracking. |
+| **Network access** | Only to the AI platforms you actively use (to call their deletion APIs). |
+| **Local storage** | User preferences only (language, deletion method). Never chat content or credentials. |
+| **Debug reports** | Created only when you explicitly click "Copy debug report" or "Report on GitHub". All tokens, email addresses, chat IDs, and UUIDs are redacted locally before anything is shown. |
+| **Third parties** | No data is sold or shared with any third party. |
+| **Open source** | Full source code is auditable at [github.com/benjarogit/ai-chat-cleaner](https://github.com/benjarogit/ai-chat-cleaner). |
+
+Permissions used: `storage` (preferences), `alarms` (batch deletion scheduling), host permissions for each supported platform (content-script injection and API calls).
 
 ---
 
 ## Support the project
 
-ACC is free and open source. Optional support helps maintenance across 20 platforms:
+ACC is free and open source. Optional support helps maintenance across 21 platforms:
 
 - [Ko-fi](https://ko-fi.com/aichatcleaner) — one-time tips
 - [Patreon](https://www.patreon.com/SunnyCueq) — Supporter tier (3 €/month)
@@ -126,6 +135,7 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 | CrewAI | REST DELETE projects | Studio menu |
 | MiniMax | REST API | Sidebar DOM |
 | Z.ai | REST DELETE | Sidebar DOM |
+| Cursor | DOM-read + API delete | Sidebar DOM |
 
 ---
 
