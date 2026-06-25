@@ -23,6 +23,8 @@ const PLATFORM_LABELS = {
   agentgpt: "AgentGPT (agentgpt.reworkd.ai)",
   crewai: "CrewAI (app.crewai.com)",
   kagi: "Kagi Assistant (assistant.kagi.com)",
+  minimax: "MiniMax (agent.minimax.io)",
+  zai: "Z.ai (chat.z.ai)",
 };
 
 /**
