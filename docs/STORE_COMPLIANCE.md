@@ -37,4 +37,4 @@ References:
 - [ ] Firefox AMO v1.0.1 submitted
 - [ ] Chrome CWS v1.0.1 submitted
 - [ ] Edge v1.0.1 submitted (optional)
-- [ ] GitHub Release v1.0.1 created
+- [x] GitHub Release v1.0.1 created — https://github.com/benjarogit/ai-chat-cleaner/releases/tag/v1.0.1

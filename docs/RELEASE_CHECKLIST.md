@@ -52,9 +52,9 @@ Ergebnisse in `docs/TEST_MATRIX.md`.
 |---|---------|--------|
 | 4.1 | Alle Commits lokal auf `main` | ✅ |
 | 4.2 | Tag `v1.0.1` auf neuesten Commit zeigend | ✅ |
-| 4.3 | **`git push origin main`** — HEAD zu GitHub pushen | ⏳ Du |
-| 4.4 | **`git push origin v1.0.1 --force`** — Tag zu GitHub pushen | ⏳ Du |
-| 4.5 | GitHub Release erstellen (v1.0.1) mit Release Notes | ⏳ Du |
+| 4.3 | **`git push origin main`** — HEAD zu GitHub gepusht | ✅ |
+| 4.4 | **`git push origin v1.0.1 --force`** — Tag zu GitHub gepusht | ✅ |
+| 4.5 | GitHub Release v1.0.1 mit Release Notes + Artifacts | ✅ |
 
 **Release Notes Vorlage (für Schritt 4.5):**
 ```
