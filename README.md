@@ -4,15 +4,19 @@
   <img src="assets/acc-logo.png" alt="AI Chat Cleaner logo" width="128" height="128">
 </p>
 
-**Bulk-delete all your AI chat history — one click, 17 platforms.**
+[![Release](https://img.shields.io/github/v/release/benjarogit/ai-chat-cleaner?label=release)](https://github.com/benjarogit/ai-chat-cleaner/releases)
+[![Firefox AMO](https://img.shields.io/amo/v/ai-chat-cleaner1?label=Firefox%20AMO)](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/claudedeleter/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
+**Bulk-delete all your AI chat history — one click, 18 platforms.**
+
+[Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/ai-chat-cleaner/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
 
 Open-source browser extension (MIT). Delete every conversation on supported AI sites without clicking through each chat individually.
 
 ---
 
-## Supported sites
+## Supported sites (18)
 
 | Platform | URL |
 |----------|-----|
@@ -29,10 +33,11 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 | Pi | [pi.ai/talk](https://pi.ai/talk) |
 | Meta AI | [meta.ai](https://www.meta.ai) |
 | Poe | [poe.com](https://poe.com) |
+| Kagi Assistant | [assistant.kagi.com](https://assistant.kagi.com) |
 | Suno (clips/songs) | [suno.com](https://suno.com) |
 | Manus | [manus.im/app](https://manus.im/app) |
 | AgentGPT | [agentgpt.reworkd.ai](https://agentgpt.reworkd.ai) |
-| CrewAI | [app.crewai.com/studio](https://app.crewai.com/studio) |
+| CrewAI | [app.crewai.com/studio/v2](https://app.crewai.com/studio/v2) |
 
 > **Suno** deletes library clips/songs, not chat threads. **CrewAI** deletes Studio automation projects.
 
@@ -45,19 +50,19 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 | Method | Best for | Link |
 |--------|----------|------|
 | **Add-ons for Firefox (AMO)** | Most users — auto-updates | [Install on AMO](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) |
-| **GitHub Release (.xpi)** | Sideloading | [acc-firefox.xpi](https://github.com/benjarogit/claudedeleter/releases/latest) |
+| **GitHub Release (.xpi)** | Sideloading | [acc-firefox.xpi](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) |
 | **Load unpacked** | Developers | `npm ci && npm run build` → `dist/firefox/` in `about:debugging` |
 
 **Android:** Install from AMO or sideload the `.xpi`.
 
 ### Chrome / Edge
 
-1. Download [`acc-chrome.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) or [`acc-edge.zip`](https://github.com/benjarogit/claudedeleter/releases/latest).
+1. Download [`acc-chrome.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) or [`acc-edge.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest).
 2. Unzip → `chrome://extensions` or `edge://extensions` → **Developer mode** → **Load unpacked**.
 
 ### Without an extension (bookmarklet / console)
 
-Paste [`acc-console.js`](https://github.com/benjarogit/claudedeleter/releases/latest) into DevTools on a supported site, or use `dist/bookmarklet.txt`.
+Paste [`acc-console.js`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) into DevTools on a supported site, or use `dist/bookmarklet.txt`.
 
 GitHub Copilot works via console/bookmarklet (iframe fetch bypass) — no extension required.
 
@@ -68,6 +73,27 @@ GitHub Copilot works via console/bookmarklet (iframe fetch bypass) — no extens
 1. Open a supported site and **log in**.
 2. Click **ACC** → **Delete all chats** → confirm.
 3. Keep the tab open until the progress bar finishes.
+
+If deletion fails, use **Copy debug report** or **Report on GitHub** in the popup. Reports are redacted (no tokens, emails, or chat IDs).
+
+---
+
+## Privacy
+
+- **No data collection** — nothing is sent to the developer automatically.
+- Deletions run **only in your browser** on the respective sites.
+- Debug reports are created only when you copy or report an error, and sensitive values are redacted locally.
+
+---
+
+## Support the project
+
+ACC is free and open source. Optional support helps maintenance across 18 platforms:
+
+- [Ko-fi](https://ko-fi.com/aichatcleaner) — one-time tips
+- [Patreon](https://patreon.com/aichatcleaner) — Supporter tier (3 €/month)
+
+Bug reports and feature ideas: [GitHub Issues](https://github.com/benjarogit/ai-chat-cleaner/issues).
 
 ---
 
@@ -90,6 +116,7 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 | Pi | REST DELETE | Conversation options |
 | Meta AI | Sidebar More options | — |
 | Poe | Sidebar | — |
+| Kagi Assistant | Sidebar | — |
 | Suno | Clip API | Library menu |
 | Manus | Connect-RPC DeleteSession | Sidebar |
 | AgentGPT | Sidebar | — |
@@ -97,22 +124,17 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 
 ---
 
-## Privacy
-
-- **No data collection** — nothing is sent to the developer.
-- Deletions run **only in your browser** on the respective sites.
-
----
-
 ## Build from source
 
 ```bash
-git clone https://github.com/benjarogit/claudedeleter.git
-cd claudedeleter
+git clone https://github.com/benjarogit/ai-chat-cleaner.git
+cd ai-chat-cleaner
 npm ci && npm run build
 ```
 
 Artifacts in `dist/`: `acc-firefox.zip`, `acc-firefox.xpi`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`.
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ---
 
@@ -122,4 +144,4 @@ Fork of [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), exten
 
 ## License
 
-MIT — Copyright (c) 2026 Sunny C.
+MIT — Copyright (c) 2025–2026 Sunny C.

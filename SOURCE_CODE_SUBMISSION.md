@@ -4,9 +4,9 @@ For Mozilla AMO reviewers. Extension JS is bundled with **esbuild** (not minifie
 
 ## Repository
 
-https://github.com/benjarogit/claudedeleter
+https://github.com/benjarogit/ai-chat-cleaner
 
-Tag **v1.3.2** matches the submitted XPI/ZIP.
+Tag **v1.0.0** matches the submitted XPI/ZIP.
 
 ## Build environment
 
@@ -18,9 +18,9 @@ Tag **v1.3.2** matches the submitted XPI/ZIP.
 ## Build instructions (reproduce submitted Firefox extension)
 
 ```bash
-git clone https://github.com/benjarogit/claudedeleter.git
-cd claudedeleter
-git checkout v1.3.2
+git clone https://github.com/benjarogit/ai-chat-cleaner.git
+cd ai-chat-cleaner
+git checkout v1.0.0
 npm ci
 npm run build
 ```

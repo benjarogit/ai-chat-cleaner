@@ -176,7 +176,7 @@ export async function confirmDialogs() {
 export function findDialogConfirmButton() {
   for (const dialog of document.querySelectorAll('[role="dialog"]')) {
     if (!isVisible(dialog)) continue;
-    const buttons = queryVisible("button", dialog);
+    const buttons = queryClickables(dialog);
     const cancel = buttons.find((b) => matchesKeywords(b, KW.cancel));
     const confirm = buttons.find((b) => {
       if (cancel && b === cancel) return false;
@@ -190,15 +190,17 @@ export function findDialogConfirmButton() {
     if (confirm) return confirm;
   }
 
-  const heading = [...document.querySelectorAll("h1, h2")].find((h) =>
-    /chat löschen|delete chat|delete conversation|unterhaltung löschen/i.test(h.textContent || "")
+  const heading = [...document.querySelectorAll("h1, h2, h3")].find((h) =>
+    /chat löschen|delete chat|delete conversation|delete thread|unterhaltung löschen|thread löschen/i.test(
+      h.textContent || ""
+    )
   );
   if (!heading) return null;
 
   const root = heading.closest('[role="dialog"]') || heading.parentElement?.parentElement;
   if (!root) return null;
 
-  const buttons = queryVisible("button", root);
+  const buttons = queryClickables(root);
   const cancel = buttons.find((b) => matchesKeywords(b, KW.cancel));
   return (
     buttons.find((b) => {
@@ -366,13 +368,14 @@ export function findClaudeRecentsBulkDelete() {
   }) ?? null;
 }
 
-/** Delete action inside open overflow menu ([role=menuitem]). */
+/** Delete action inside open overflow menu ([role=menuitem] / Pi [role=option]). */
 export function findOpenMenuDeleteItem() {
   const menu =
     document.querySelector('[role="menu"]') ||
+    document.querySelector('[role="listbox"]') ||
     document.querySelector('[data-radix-menu-content]');
   const root = menu || document;
-  const items = [...root.querySelectorAll('[role="menuitem"]')].filter(isVisible);
+  const items = [...root.querySelectorAll('[role="menuitem"], [role="option"]')].filter(isVisible);
   return items.find((el) => matchesKeywords(el, KW.delete)) ?? findByKeywords(KW.delete, root);
 }
 
@@ -718,7 +721,11 @@ function wakeDeepseekSidebarRowMenu(link) {
   if (!link) return null;
   link.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
   link.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
-  return link.querySelector('[role="button"]') ?? null;
+  return (
+    link.querySelector('[role="button"]') ??
+    link.parentElement?.querySelector('[role="button"]') ??
+    null
+  );
 }
 
 /** Sidebar row ⋯ → Delete → confirm (live-tested). */
@@ -892,13 +899,19 @@ async function deleteViaSidebarMenu({
 }
 
 export function findCopilotMicrosoftChatLinks(root = document) {
+  const heading = [...root.querySelectorAll("h2")].find((el) =>
+    /our conversations together/i.test(el.textContent || "")
+  );
+  const list = heading?.parentElement?.querySelector('[role="list"]');
+  if (!list) return [];
+
   const links = [];
   const seen = new Set();
-  for (const a of root.querySelectorAll('a[href*="/chats/"], a[href*="/c/"]')) {
-    const href = a.href;
-    if (!href.includes("copilot.microsoft.com") || seen.has(href) || !isVisible(a)) continue;
-    seen.add(href);
-    links.push(a);
+  for (const el of list.querySelectorAll('[role="link"]')) {
+    const label = (el.getAttribute("aria-label") || el.textContent || "").trim();
+    if (!label || seen.has(label) || !isVisible(el)) continue;
+    seen.add(label);
+    links.push(el);
   }
   return links;
 }
@@ -908,23 +921,37 @@ export function countCopilotMicrosoftSidebarChats(root = document) {
 }
 
 export async function deleteCopilotMicrosoftViaSidebar(onProgress) {
-  return deleteViaSidebarMenu({
-    findLinks: findCopilotMicrosoftChatLinks,
-    openMenu: () => {
-      const btn =
-        findToolbarButton(["conversation actions", "more options", "chat options"]) ??
-        queryClickables().find((el) => /more options|conversation actions/i.test(elementText(el)));
-      btn?.click();
-      return !!btn;
-    },
-  });
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const rows = findCopilotMicrosoftChatLinks();
+    if (!rows.length) break;
+
+    const viewOpts =
+      rows[0].querySelector('button[aria-label*="View Options" i]') ??
+      queryClickables(rows[0]).find((el) => /view options/i.test(elementText(el)));
+    if (!viewOpts) break;
+
+    viewOpts.click();
+    await sleep(350);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(rows.length, deleted));
+    await sleep(500);
+  }
+  return deleted;
 }
 
 export function findMistralSidebarChatLinks(root = document) {
   const seen = new Set();
   const links = [];
-  for (const a of root.querySelectorAll('a[href*="/chat/"]')) {
-    const match = a.href.match(/\/chat\/([0-9a-f-]{36})/i);
+  for (const a of root.querySelectorAll('a[href*="/chat/"], a[href*="/work/"]')) {
+    const match = a.href.match(/\/(?:chat|work)\/([0-9a-f-]{36})/i);
     if (!match || seen.has(match[1]) || !isVisible(a)) continue;
     seen.add(match[1]);
     links.push(a);
@@ -940,10 +967,27 @@ export async function deleteMistralViaSidebar(onProgress) {
   return deleteViaSidebarMenu({
     findLinks: findMistralSidebarChatLinks,
     openMenu: (link) => {
-      const row = link.closest("li") || link.parentElement;
+      const title =
+        link.getAttribute("aria-label") ||
+        link.querySelector("p")?.getAttribute("title") ||
+        link.textContent?.trim() ||
+        "";
       const btn =
-        row?.querySelector('button[aria-label*="More"], button[aria-label*="options"]') ??
-        queryClickables(row).find((el) => /^⋯|more$/i.test(elementText(el)));
+        (title &&
+          queryClickables().find(
+            (el) =>
+              el.tagName === "BUTTON" &&
+              el.hasAttribute("aria-expanded") &&
+              elementText(el).includes(title.slice(0, 24))
+          )) ??
+        queryClickables().find(
+          (el) =>
+            el.tagName === "BUTTON" &&
+            el.hasAttribute("aria-expanded") &&
+            !/vibe|voice|like|settings|more options|context|project|scheduled/i.test(
+              elementText(el)
+            )
+        );
       btn?.click();
       return !!btn;
     },
@@ -951,12 +995,16 @@ export async function deleteMistralViaSidebar(onProgress) {
 }
 
 export function findPiSidebarChatLinks(root = document) {
+  const nav = root.querySelector('[role="navigation"][aria-label*="Side" i], nav[aria-label*="Side" i]');
+  const scope = nav || root;
   const links = [];
   const seen = new Set();
-  for (const btn of root.querySelectorAll('button[aria-label*="chat"], a[href*="/talk"]')) {
-    const label = btn.getAttribute("aria-label") || btn.textContent || "";
+  for (const btn of scope.querySelectorAll("button")) {
+    const label = (btn.getAttribute("aria-label") || btn.textContent || "").trim();
     if (!label || seen.has(label) || !isVisible(btn)) continue;
-    if (/new chat/i.test(label)) continue;
+    if (/^(new chat|home chat|conversation options|toggle sidebar|my stuff|discover|help|settings|turn voice)/i.test(label)) {
+      continue;
+    }
     seen.add(label);
     links.push(btn);
   }
@@ -970,7 +1018,16 @@ export function countPiSidebarChats(root = document) {
 export async function deletePiViaConversationOptions(onProgress) {
   let deleted = 0;
   for (let i = 0; i < 100; i++) {
-    const opts = findByAriaIncludes("Conversation options");
+    const buttons = queryClickables().filter(isVisible);
+    let opts = null;
+    for (let j = 0; j < buttons.length; j++) {
+      const label = (buttons[j].getAttribute("aria-label") || buttons[j].textContent || "").trim();
+      if (!/conversation options/i.test(label)) continue;
+      const title = (buttons[j - 1]?.getAttribute("aria-label") || buttons[j - 1]?.textContent || "").trim();
+      if (!title || /^home chat$/i.test(title)) continue;
+      opts = buttons[j];
+      break;
+    }
     if (!opts) break;
 
     opts.click();
@@ -983,6 +1040,71 @@ export async function deletePiViaConversationOptions(onProgress) {
     await sleep(300);
     await confirmDialogs();
     deleted++;
+    onProgress?.(deleted, Math.max(deleted, 1));
+    await sleep(500);
+  }
+  return deleted;
+}
+
+export function findKagiSidebarChatLinks(root = document) {
+  const nav = root.querySelector('[role="navigation"][aria-label*="Thread" i]');
+  const scope = nav || root;
+  const links = [];
+  const seen = new Set();
+  for (const a of scope.querySelectorAll('a[href*="/chat/"]')) {
+    const match = a.href.match(/\/chat\/([0-9a-f-]{36})/i);
+    if (!match || seen.has(match[1]) || !isVisible(a)) continue;
+    seen.add(match[1]);
+    links.push(a);
+  }
+  return links;
+}
+
+export function countKagiSidebarChats(root = document) {
+  return findKagiSidebarChatLinks(root).length;
+}
+
+/** Kagi sidebar ⋮ — revealed via group-hover or .menu-open on row. */
+async function wakeKagiSidebarRowMenu(link) {
+  const row = link?.closest('li, [role="listitem"]') || link?.parentElement;
+  if (!row) return null;
+
+  link?.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+  link?.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
+  row.dispatchEvent(new PointerEvent("mouseenter", { bubbles: true }));
+  row.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
+  row.classList.add("menu-open");
+  await sleep(250);
+
+  return (
+    row.querySelector('button[aria-label*="More options" i]') ??
+    [...row.querySelectorAll("button")].find((b) =>
+      /more options/i.test(b.getAttribute("aria-label") || "")
+    ) ??
+    null
+  );
+}
+
+export async function deleteKagiViaSidebar(onProgress) {
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const links = findKagiSidebarChatLinks();
+    if (!links.length) break;
+
+    const more = await wakeKagiSidebarRowMenu(links[0]);
+    if (!more) break;
+
+    more.click();
+    await sleep(350);
+
+    const del = findOpenMenuDeleteItem();
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(links.length, deleted));
     await sleep(500);
   }
   return deleted;
@@ -1005,27 +1127,48 @@ export function countMetaAiSidebarChats(root = document) {
 }
 
 export async function deleteMetaAiViaMoreOptions(onProgress) {
-  return deleteViaSidebarMenu({
-    findLinks: findMetaAiSidebarChatLinks,
-    openMenu: () => {
-      const btn =
-        findByAriaIncludes("More options") ??
-        queryClickables().find((el) => /more options/i.test(elementText(el)));
-      btn?.click();
-      return !!btn;
-    },
-  });
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const links = findMetaAiSidebarChatLinks();
+    if (!links.length) break;
+
+    links[0].click();
+    await sleep(600);
+
+    const menuBtn =
+      queryVisible("button").find((b) => /^menu$/i.test((b.getAttribute("aria-label") || "").trim())) ??
+      queryClickables().find((el) => /^menu$/i.test(elementText(el)));
+    if (!menuBtn) break;
+
+    menuBtn.click();
+    await sleep(350);
+
+    const del =
+      findOpenMenuDeleteItem() ??
+      queryClickables().find((el) => /delete chat|delete conversation|chat löschen/i.test(elementText(el)));
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(links.length, deleted));
+    await sleep(500);
+  }
+  return deleted;
 }
 
 export function findPoeSidebarChatLinks(root = document) {
   const seen = new Set();
   const links = [];
-  for (const a of root.querySelectorAll('a[href*="/chat/"], a[href*="poe.com/"]')) {
-    const href = a.href;
-    if (!href.includes("poe.com") || seen.has(href) || !isVisible(a)) continue;
-    if (/\/bots?\//i.test(href) && !/\/chat\//i.test(href)) continue;
-    seen.add(href);
-    links.push(a);
+  for (const row of root.querySelectorAll('li[class*="ChatHistoryListItem"]')) {
+    const link = row.querySelector('[role="link"]');
+    const title =
+      row.querySelector('[class*="title"]')?.textContent?.trim() ||
+      link?.textContent?.trim().slice(0, 48);
+    if (!title || seen.has(title) || !isVisible(row)) continue;
+    seen.add(title);
+    links.push(link || row);
   }
   return links;
 }
@@ -1034,16 +1177,100 @@ export function countPoeSidebarChats(root = document) {
   return findPoeSidebarChatLinks(root).length;
 }
 
+/** Poe sidebar ⋮ — hover-hidden; revealed after row focus/enter. */
+async function ensurePoeSidebarOpen() {
+  const row = document.querySelector('li[class*="ChatHistoryListItem"]');
+  const link = row?.querySelector('[role="link"]');
+  if (link && link.getBoundingClientRect().x >= 0) return;
+
+  const toggle = queryClickables().find((el) =>
+    /^toggle sidebar$/i.test(el.getAttribute("aria-label") || "")
+  );
+  toggle?.click();
+  await sleep(350);
+}
+
+async function wakePoeSidebarRowMenu(linkOrRow) {
+  const row =
+    linkOrRow?.closest('li[class*="ChatHistoryListItem"]') ||
+    linkOrRow?.querySelector?.('[role="link"]')?.closest('li[class*="ChatHistoryListItem"]') ||
+    linkOrRow;
+  const link = row?.querySelector('[role="link"]') || linkOrRow;
+  if (!row) return null;
+
+  link?.click();
+  link?.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }));
+  link?.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
+  row.dispatchEvent(new PointerEvent("mouseenter", { bubbles: true }));
+  row.dispatchEvent(new PointerEvent("mouseover", { bubbles: true }));
+  await sleep(300);
+
+  return (
+    row.querySelector('button[aria-label="More actions"]') ??
+    [...row.querySelectorAll("button")].find((b) =>
+      /^more actions$/i.test(b.getAttribute("aria-label") || "")
+    ) ??
+    null
+  );
+}
+
+function revealPoeOverflowButton(btn) {
+  if (!btn) return null;
+  btn.style.display = "inline-flex";
+  btn.style.visibility = "visible";
+  btn.style.opacity = "1";
+  return btn;
+}
+
 export async function deletePoeViaSidebar(onProgress) {
-  return deleteViaSidebarMenu({ findLinks: findPoeSidebarChatLinks });
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    await ensurePoeSidebarOpen();
+    const links = findPoeSidebarChatLinks();
+    if (!links.length) break;
+
+    const more = revealPoeOverflowButton(await wakePoeSidebarRowMenu(links[0]));
+    if (!more) break;
+
+    more.click();
+    await sleep(350);
+
+    const del =
+      findOpenMenuDeleteItem() ??
+      queryClickables().find((el) => /^delete chat$/i.test(elementText(el)));
+    if (!del) break;
+
+    del.click();
+    await sleep(300);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(links.length, deleted));
+    await sleep(500);
+  }
+  return deleted;
 }
 
 export function findSunoClipElements(root = document) {
-  return [...root.querySelectorAll('[data-testid*="clip"], [class*="clip"], article')].filter(
-    (el) =>
-      isVisible(el) &&
-      el.querySelector('button[aria-label*="More"], button[aria-label*="options"]')
-  );
+  const clips = [];
+  const seen = new Set();
+  for (const more of root.querySelectorAll('button[aria-label="More options"]')) {
+    if (!isVisible(more)) continue;
+    let row = more.parentElement;
+    for (let i = 0; i < 12 && row; i++) {
+      if (
+        row.querySelector('button[aria-label="Play"]') &&
+        row.querySelector('button[aria-label="More options"]')
+      ) {
+        if (!seen.has(row)) {
+          seen.add(row);
+          clips.push(row);
+        }
+        break;
+      }
+      row = row.parentElement;
+    }
+  }
+  return clips;
 }
 
 export function countSunoLibraryClips(root = document) {
@@ -1066,7 +1293,7 @@ export async function deleteSunoViaClipMenu(onProgress) {
 
     const del =
       findOpenMenuDeleteItem() ??
-      queryClickables().find((el) => /delete|remove|trash/i.test(elementText(el)));
+      queryClickables().find((el) => /move to trash|delete|remove|trash/i.test(elementText(el)));
     if (!del) break;
 
     del.click();
@@ -1081,11 +1308,21 @@ export async function deleteSunoViaClipMenu(onProgress) {
 export function findManusSidebarSessionLinks(root = document) {
   const links = [];
   const seen = new Set();
-  for (const a of root.querySelectorAll('a[href*="/app/"], a[href*="/session"]')) {
-    if (seen.has(a.href) || !isVisible(a)) continue;
+
+  for (const el of root.querySelectorAll("[data-session-item], [data-session-id]")) {
+    const id = el.getAttribute("data-session-id") || el.dataset.sessionId;
+    if (!id || seen.has(id) || !isVisible(el)) continue;
+    seen.add(id);
+    links.push(el);
+  }
+
+  for (const a of root.querySelectorAll('a[href*="/app/"]')) {
+    const path = a.getAttribute("href") || "";
+    if (path === "/app" || path.endsWith("/app/") || seen.has(a.href) || !isVisible(a)) continue;
     seen.add(a.href);
     links.push(a);
   }
+
   return links;
 }
 
@@ -1093,18 +1330,77 @@ export function countManusSidebarSessions(root = document) {
   return findManusSidebarSessionLinks(root).length;
 }
 
+function revealManusSessionOverflow(row) {
+  const menu = row.querySelector('[aria-haspopup="dialog"]');
+  if (!menu) return null;
+  menu.style.width = "32px";
+  menu.style.height = "32px";
+  menu.style.overflow = "visible";
+  menu.style.display = "flex";
+  return menu;
+}
+
 export async function deleteManusViaSidebar(onProgress) {
-  return deleteViaSidebarMenu({ findLinks: findManusSidebarSessionLinks });
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    const items = findManusSidebarSessionLinks();
+    if (!items.length) break;
+
+    const row = items[0];
+    row.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    row.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+
+    const menu = revealManusSessionOverflow(row);
+    if (!menu) break;
+
+    menu.click();
+    await sleep(350);
+
+    const del = [...document.querySelectorAll('[role="dialog"] *')].find(
+      (el) => (el.textContent || "").trim() === "Delete" && el.children.length <= 1
+    );
+    if (!del) break;
+
+    del.click();
+    await sleep(400);
+
+    const confirm = [...document.querySelectorAll('button, [role="button"]')].find(
+      (el) =>
+        (el.textContent || "").trim() === "Delete" &&
+        el.closest('[role="dialog"], [role="alertdialog"]')
+    );
+    confirm?.click();
+    await sleep(500);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(deleted, 1));
+    await sleep(450);
+  }
+  return deleted;
 }
 
 export function findAgentGptSidebarLinks(root = document) {
   const links = [];
   const seen = new Set();
-  for (const a of root.querySelectorAll('a[href*="/agent"], a[href*="/run"]')) {
+  const skip =
+    /^(templates|help|settings|manage account|subscribe|sign in|home|new|pages)$/i;
+
+  for (const btn of root.querySelectorAll(
+    '.mb-2.mr-2.flex-1 button, [class*="overflow-ellipsis"] button'
+  )) {
+    const label = (btn.textContent || "").replace(/\s+/g, " ").trim();
+    if (!label || seen.has(label) || !isVisible(btn) || skip.test(label)) continue;
+    if (!btn.querySelector("span.font-light, span.text-sm")) continue;
+    seen.add(label);
+    links.push(btn);
+  }
+
+  for (const a of root.querySelectorAll('a[href*="/agent"]')) {
     if (seen.has(a.href) || !isVisible(a)) continue;
     seen.add(a.href);
     links.push(a);
   }
+
   return links;
 }
 
@@ -1112,13 +1408,51 @@ export function countAgentGptSidebarItems(root = document) {
   return findAgentGptSidebarLinks(root).length;
 }
 
+function ensureAgentGptSidebarOpen() {
+  if (findAgentGptSidebarLinks().length) return;
+  const toggle =
+    document.querySelector('button.fixed[class*="z-20"]') ??
+    [...document.querySelectorAll("button")].find(
+      (b) => isVisible(b) && b.className.includes("fixed") && b.querySelector("svg")
+    );
+  toggle?.click();
+}
+
 export async function deleteAgentGptViaSidebar(onProgress) {
-  return deleteViaSidebarMenu({ findLinks: findAgentGptSidebarLinks });
+  let deleted = 0;
+  for (let i = 0; i < 100; i++) {
+    ensureAgentGptSidebarOpen();
+    await sleep(350);
+
+    const items = findAgentGptSidebarLinks();
+    if (!items.length) break;
+
+    items[0].click();
+    await sleep(800);
+
+    let del = null;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      del = [...document.querySelectorAll("button")].find(
+        (b) => (b.textContent || "").trim() === "Delete" && !b.disabled
+      );
+      if (del) break;
+      await sleep(250);
+    }
+    if (!del) break;
+
+    del.click();
+    await sleep(1000);
+    await confirmDialogs();
+    deleted++;
+    onProgress?.(deleted, Math.max(deleted, 1));
+    await sleep(500);
+  }
+  return deleted;
 }
 
 export function findCrewAiProjectElements(root = document) {
-  return [...root.querySelectorAll('[data-testid*="project"], article, [class*="project"]')].filter(
-    (el) => isVisible(el)
+  return [...root.querySelectorAll(".project-card:not(.project-card-create)")].filter((el) =>
+    isVisible(el)
   );
 }
 
@@ -1132,21 +1466,30 @@ export async function deleteCrewAiViaProjectMenu(onProgress) {
     const projects = findCrewAiProjectElements();
     if (!projects.length) break;
 
-    const more =
-      projects[0].querySelector('button[aria-label*="More"], button[aria-label*="menu"]') ??
-      queryClickables(projects[0]).find((el) => /more|⋯/i.test(elementText(el)));
-    if (!more) break;
+    const card = projects[0];
+    card.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    card.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await sleep(200);
 
-    more.click();
-    await sleep(350);
-
-    const del = findOpenMenuDeleteItem();
+    const del =
+      card.querySelector('button.delete-button[title="Delete project"]') ??
+      card.querySelector('button[title="Delete project"]') ??
+      queryClickables(card).find((el) => /delete project/i.test(elementText(el)));
     if (!del) break;
 
     del.click();
     await sleep(300);
-    await confirmDialogs();
+    const remove = queryClickables().find(
+      (b) => isVisible(b) && /^(remove|delete)$/i.test(elementText(b).trim())
+    );
+    if (remove) {
+      remove.click();
+      await sleep(600);
+    } else {
+      await confirmDialogs();
+    }
     deleted++;
+    onProgress?.(deleted, Math.max(deleted, 1));
     await sleep(500);
   }
   return deleted;

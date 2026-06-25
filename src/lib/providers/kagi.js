@@ -1,20 +1,19 @@
 import {
-  confirmDialogs,
-  countPiSidebarChats,
-  deletePiViaConversationOptions,
-  findPiSidebarChatLinks,
+  countKagiSidebarChats,
+  deleteKagiViaSidebar,
+  findKagiSidebarChatLinks,
 } from "../dom.js";
 import { runDeleteLoop } from "../shared.js";
 
 async function listConversationIds(fetchFn) {
-  const response = await fetchFn("/api/conversations?includeDeleted=false", {
+  const response = await fetchFn("/api/conversations", {
     credentials: "include",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error(`list HTTP ${response.status}`);
 
   const data = await response.json();
-  return (data.results || []).map((c) => c.id || c.sid).filter(Boolean);
+  return (data.items || []).map((c) => c.uuid || c.id).filter(Boolean);
 }
 
 async function assertGone(fetchFn) {
@@ -25,27 +24,27 @@ async function assertGone(fetchFn) {
     /* DOM */
   }
 
-  const domCount = countPiSidebarChats();
+  const domCount = countKagiSidebarChats();
   const parts = [];
   if (apiCount > 0) parts.push(`${apiCount} in API`);
   if (domCount > 0) parts.push(`${domCount} visible in sidebar`);
   if (parts.length) {
-    throw new Error(`Pi chats still remain (${parts.join(", ")})`);
+    throw new Error(`Kagi threads still remain (${parts.join(", ")})`);
   }
 }
 
 async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
   const ids = await listConversationIds(fetchFn);
   if (!ids.length) {
-    const domCount = countPiSidebarChats();
-    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
+    const domCount = countKagiSidebarChats();
+    if (domCount > 0) throw new Error(`API listed 0 threads but ${domCount} visible in sidebar`);
     return { deleted: 0, total: 0 };
   }
 
   const result = await runDeleteLoop({
     ids,
     delayMs,
-    label: "chat",
+    label: "thread",
     onProgress,
     deleteOne: async (id) => {
       const response = await fetchFn(`/api/conversations/${id}`, {
@@ -62,11 +61,11 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
 }
 
 async function deleteSidebarDom(fetchFn, onProgress) {
-  const estimated = Math.max(countPiSidebarChats(), 1);
-  if (!findPiSidebarChatLinks().length) return { deleted: 0, total: 0 };
+  const estimated = Math.max(countKagiSidebarChats(), 1);
+  if (!findKagiSidebarChatLinks().length) return { deleted: 0, total: 0 };
 
-  let deleted = await deletePiViaConversationOptions(onProgress);
-  if (!deleted) throw new Error("No Pi Conversation options → Delete controls found");
+  let deleted = await deleteKagiViaSidebar(onProgress);
+  if (!deleted) throw new Error("No Kagi sidebar More options → Delete controls found");
 
   await assertGone(fetchFn);
   return { deleted, total: estimated };
@@ -74,19 +73,18 @@ async function deleteSidebarDom(fetchFn, onProgress) {
 
 /** ACC delete provider (public API). */
 
-export const piProvider = {
-  id: "pi",
-  name: "Pi",
+export const kagiProvider = {
+  id: "kagi",
+  name: "Kagi Assistant",
   match(url) {
     try {
-      const u = new URL(url);
-      return u.hostname === "pi.ai" && u.pathname.startsWith("/talk");
+      return new URL(url).hostname === "assistant.kagi.com";
     } catch {
       return false;
     }
   },
 
-  /** Live: api-individual → dom-sidebar (Conversation options) */
+  /** Live: api-individual → dom-sidebar */
   async getDeleteMethods(ctx) {
     let apiIds = [];
     try {
@@ -94,7 +92,7 @@ export const piProvider = {
     } catch {
       /* session */
     }
-    const domCount = countPiSidebarChats();
+    const domCount = countKagiSidebarChats();
 
     if (!apiIds.length && !domCount) {
       return [{ name: "noop", step: null, fn: () => ({ deleted: 0, total: 0 }) }];

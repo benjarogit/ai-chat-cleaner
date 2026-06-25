@@ -237,7 +237,7 @@
       R.apiListCount = sessions.length;
       R.apiIds = sessions.map((s) => s.sessionId || s.id);
     }
-    R.domCount = document.querySelectorAll('a[href*="/app/"]').length;
+    R.domCount = document.querySelectorAll("[data-session-item]").length;
     return R;
   }
 
@@ -248,7 +248,9 @@
     }).then((r) => r.json());
     const agents = list?.[0]?.result?.data?.json || [];
     R.apiListCount = agents.length;
-    R.domCount = document.querySelectorAll('a[href*="/agent"]').length;
+    R.domCount = document.querySelectorAll(
+      '.mb-2.mr-2.flex-1 button, [class*="overflow-ellipsis"] button'
+    ).length;
     return R;
   }
 
@@ -257,7 +259,22 @@
     const projects = Array.isArray(list) ? list : list.projects || [];
     R.apiListCount = projects.length;
     R.apiIds = projects.map((p) => p.id);
-    R.domCount = document.querySelectorAll('[data-testid*="project"], article').length;
+    R.domCount = document.querySelectorAll(".project-card:not(.project-card-create)").length;
+    return R;
+  }
+
+  if (host === "assistant.kagi.com") {
+    const list = await fetch("/api/conversations", { credentials: "include" }).then((r) => r.json());
+    R.apiListCount = (list.items || []).length;
+    R.apiIds = (list.items || []).map((c) => c.uuid);
+    R.domCount = document.querySelectorAll('a[href*="/chat/"]').length;
+    if (doDeleteOne && list.items?.[0]) {
+      const id = list.items[0].uuid;
+      const del = await fetch(`/api/conversations/${id}`, { method: "DELETE", credentials: "include" });
+      R.deleteOne = { id, status: del.status, body: await del.text() };
+      const list2 = await fetch("/api/conversations", { credentials: "include" }).then((r) => r.json());
+      R.afterApiCount = (list2.items || []).length;
+    }
     return R;
   }
 

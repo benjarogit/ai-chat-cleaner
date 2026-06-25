@@ -168,6 +168,8 @@ async function deleteHistoryDom(fetchFn, onProgress) {
   return { deleted, total: deleted };
 }
 
+/** ACC delete provider (public API). */
+
 export const grokComProvider = {
   id: "grok-com",
   name: "Grok",

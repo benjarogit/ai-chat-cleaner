@@ -193,7 +193,7 @@ async function main() {
       "(If you started an upload with the old ID, cancel and upload as new add-on.)",
       "",
       "Source code (bundled JS):",
-      "  https://github.com/benjarogit/claudedeleter",
+      "  https://github.com/benjarogit/ai-chat-cleaner",
       "  npm ci && npm run build",
       "",
       "Author: Sunny C. — https://sunnyc.de",

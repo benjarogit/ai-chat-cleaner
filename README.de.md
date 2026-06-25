@@ -4,15 +4,19 @@
   <img src="assets/acc-logo.png" alt="AI Chat Cleaner Logo" width="128" height="128">
 </p>
 
-**Alle KI-Chats auf einmal löschen — ein Klick, 17 Plattformen.**
+[![Release](https://img.shields.io/github/v/release/benjarogit/ai-chat-cleaner?label=Release)](https://github.com/benjarogit/ai-chat-cleaner/releases)
+[![Firefox AMO](https://img.shields.io/amo/v/ai-chat-cleaner1?label=Firefox%20AMO)](https://addons.mozilla.org/de/firefox/addon/ai-chat-cleaner1/)
+[![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-blue.svg)](LICENSE)
 
-[English](README.md) · [Releases](https://github.com/benjarogit/claudedeleter/releases) · [Firefox Add-ons](https://addons.mozilla.org/de/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
+**KI-Chat-Verlauf massenhaft löschen — ein Klick, 18 Plattformen.**
 
-Open-Source-Browser-Erweiterung (MIT). Löscht den gesamten Chat-Verlauf auf unterstützten KI-Seiten — ohne jeden Chat einzeln durchzuklicken.
+[English](README.md) · [Releases](https://github.com/benjarogit/ai-chat-cleaner/releases) · [Firefox Add-ons](https://addons.mozilla.org/de/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
+
+Open-Source-Browsererweiterung (MIT). Alle Unterhaltungen auf unterstützten KI-Seiten löschen, ohne jeden Chat einzeln anzuklicken.
 
 ---
 
-## Unterstützte Seiten
+## Unterstützte Seiten (18)
 
 | Plattform | URL |
 |-----------|-----|
@@ -29,12 +33,13 @@ Open-Source-Browser-Erweiterung (MIT). Löscht den gesamten Chat-Verlauf auf unt
 | Pi | [pi.ai/talk](https://pi.ai/talk) |
 | Meta AI | [meta.ai](https://www.meta.ai) |
 | Poe | [poe.com](https://poe.com) |
+| Kagi Assistant | [assistant.kagi.com](https://assistant.kagi.com) |
 | Suno (Clips/Songs) | [suno.com](https://suno.com) |
 | Manus | [manus.im/app](https://manus.im/app) |
 | AgentGPT | [agentgpt.reworkd.ai](https://agentgpt.reworkd.ai) |
-| CrewAI | [app.crewai.com/studio](https://app.crewai.com/studio) |
+| CrewAI | [app.crewai.com/studio/v2](https://app.crewai.com/studio/v2) |
 
-> **Suno** löscht Library-Clips/Songs, keine Chats. **CrewAI** löscht Studio-Automations-Projekte.
+> **Suno** löscht Bibliotheks-Clips/Songs, keine Chat-Threads. **CrewAI** löscht Studio-Automatisierungsprojekte.
 
 ---
 
@@ -44,53 +49,63 @@ Open-Source-Browser-Erweiterung (MIT). Löscht den gesamten Chat-Verlauf auf unt
 
 | Methode | Für wen | Link |
 |---------|---------|------|
-| **Add-ons für Firefox (AMO)** | Die meisten Nutzer | [Bei AMO installieren](https://addons.mozilla.org/de/firefox/addon/ai-chat-cleaner1/) |
-| **GitHub Release (.xpi)** | Sideload | [acc-firefox.xpi](https://github.com/benjarogit/claudedeleter/releases/latest) |
-| **Entpackt laden** | Entwickler | `npm ci && npm run build` → `dist/firefox/` |
+| **Add-ons for Firefox (AMO)** | Die meisten Nutzer — Auto-Updates | [Bei AMO installieren](https://addons.mozilla.org/de/firefox/addon/ai-chat-cleaner1/) |
+| **GitHub Release (.xpi)** | Sideload | [acc-firefox.xpi](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) |
+| **Entpackt laden** | Entwickler | `npm ci && npm run build` → `dist/firefox/` in `about:debugging` |
 
-**Android:** AMO oder `.xpi` sideloaden.
+**Android:** Installation über AMO oder Sideload der `.xpi`.
 
 ### Chrome / Edge
 
-1. [`acc-chrome.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) oder [`acc-edge.zip`](https://github.com/benjarogit/claudedeleter/releases/latest) herunterladen.
+1. [`acc-chrome.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) oder [`acc-edge.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) herunterladen.
 2. Entpacken → `chrome://extensions` oder `edge://extensions` → **Entwicklermodus** → **Entpackte Erweiterung laden**.
 
 ### Ohne Erweiterung (Bookmarklet / Konsole)
 
-[`acc-console.js`](https://github.com/benjarogit/claudedeleter/releases/latest) in die DevTools-Konsole einfügen. GitHub Copilot funktioniert ohne Erweiterung (iframe-fetch-Bypass).
+[`acc-console.js`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) in die DevTools-Konsole einfügen. GitHub Copilot funktioniert ohne Erweiterung (iframe-fetch-Bypass).
 
 ---
 
 ## Nutzung
 
 1. Unterstützte Seite öffnen und **einloggen**.
-2. **ACC** → **Delete all chats** → bestätigen.
+2. **ACC** klicken → **Alle Chats löschen** → bestätigen.
 3. Tab offen lassen, bis die Fortschrittsanzeige fertig ist.
 
----
-
-## Funktionsweise
-
-API zuerst, DOM-Fallbacks wenn nötig. Siehe [README.md](README.md) für die vollständige Methoden-Tabelle.
+Bei Fehlern: **Debug-Bericht kopieren** oder **Auf GitHub melden** im Popup. Berichte sind geschwärzt (keine Tokens, E-Mails oder Chat-IDs).
 
 ---
 
 ## Datenschutz
 
-- **Keine Datenerhebung** — nichts wird an den Entwickler gesendet.
-- Löschungen laufen **nur im Browser** auf den jeweiligen Seiten.
+- **Keine Datensammlung** — nichts wird automatisch an den Entwickler gesendet.
+- Löschungen laufen **nur in deinem Browser** auf den jeweiligen Seiten.
+- Debug-Berichte entstehen nur bei Kopieren/Melden eines Fehlers und werden lokal geschwärzt.
 
 ---
 
-## Aus dem Quellcode bauen
+## Projekt unterstützen
+
+ACC ist kostenlos und Open Source. Optionale Unterstützung hilft bei der Pflege von 18 Plattformen:
+
+- [Ko-fi](https://ko-fi.com/aichatcleaner) — Einmal-Spenden
+- [Patreon](https://patreon.com/aichatcleaner) — Supporter-Stufe (3 €/Monat)
+
+Fehler und Ideen: [GitHub Issues](https://github.com/benjarogit/ai-chat-cleaner/issues).
+
+---
+
+## Build aus Quellcode
 
 ```bash
-git clone https://github.com/benjarogit/claudedeleter.git
-cd claudedeleter
+git clone https://github.com/benjarogit/ai-chat-cleaner.git
+cd ai-chat-cleaner
 npm ci && npm run build
 ```
 
 Artefakte in `dist/`: `acc-firefox.zip`, `acc-firefox.xpi`, `acc-chrome.zip`, `acc-edge.zip`, `acc-console.js`.
+
+Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -100,4 +115,4 @@ Fork von [emcquee/claudedeleter](https://github.com/emcquee/claudedeleter), erwe
 
 ## Lizenz
 
-MIT — Copyright (c) 2026 Sunny C.
+MIT — Copyright (c) 2025–2026 Sunny C.

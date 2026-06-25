@@ -154,6 +154,8 @@ async function deleteViaOverflow(ctx) {
   return { deleted, total: before };
 }
 
+/** ACC delete provider (public API). */
+
 export const claudeProvider = {
   id: "claude",
   name: "Claude",

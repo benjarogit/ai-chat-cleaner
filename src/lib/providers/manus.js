@@ -9,11 +9,19 @@ import { runDeleteLoop } from "../shared.js";
 
 const API = "https://api.manus.im";
 
+function getManusAuthHeader() {
+  const token = decodeURIComponent(
+    (document.cookie.match(/(?:^|;\s*)session_id=([^;]+)/) || [])[1] || ""
+  );
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function connectHeaders(extra = {}) {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
     "connect-protocol-version": "1",
+    ...getManusAuthHeader(),
     ...extra,
   };
 }
@@ -29,7 +37,7 @@ async function listSessionIds(fetchFn) {
 
   const data = await response.json();
   const sessions = data.sessions || data.items || [];
-  return sessions.map((s) => s.sessionId || s.id).filter(Boolean);
+  return sessions.map((s) => s.uid || s.sessionUid || s.sessionId || s.id).filter(Boolean);
 }
 
 async function assertGone(fetchFn) {
@@ -67,7 +75,7 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
         method: "POST",
         credentials: "include",
         headers: connectHeaders(),
-        body: JSON.stringify({ sessionId: id }),
+        body: JSON.stringify({ sessionUid: id }),
       });
       if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
     },
@@ -88,6 +96,8 @@ async function deleteSidebarDom(fetchFn, onProgress) {
   await assertGone(fetchFn);
   return { deleted, total: estimated };
 }
+
+/** ACC delete provider (public API). */
 
 export const manusProvider = {
   id: "manus",

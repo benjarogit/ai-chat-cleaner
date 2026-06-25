@@ -290,6 +290,8 @@ function geminiHasSidebarTargets() {
   );
 }
 
+/** ACC delete provider (public API). */
+
 export const geminiProvider = {
   id: "gemini",
   name: "Gemini",

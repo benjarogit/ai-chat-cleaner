@@ -1,3 +1,4 @@
+/** @file ACC entry — delete orchestration, resume after navigation, debug reports. */
 import { detectProvider, providers, supportedSitesLabel } from "./registry.js";
 import {
   clearPending,

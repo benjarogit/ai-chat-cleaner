@@ -84,19 +84,12 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
     label: "clip",
     onProgress,
     deleteOne: async (id) => {
-      let response = await fetchFn(`${STUDIO_API}/api/clip/${id}`, {
-        method: "DELETE",
+      const response = await fetchFn(`${STUDIO_API}/api/gen/trash`, {
+        method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json", ...auth },
+        headers: { "Content-Type": "application/json", Accept: "application/json", ...auth },
+        body: JSON.stringify({ trash: true, clip_ids: [id] }),
       });
-      if (response.status === 405) {
-        response = await fetchFn(`${STUDIO_API}/api/clip/trash`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json", Accept: "application/json", ...auth },
-          body: JSON.stringify({ clip_ids: [id] }),
-        });
-      }
       if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
     },
   });
@@ -115,6 +108,8 @@ async function deleteLibraryDom(fetchFn, onProgress) {
   await assertGone(fetchFn);
   return { deleted, total: estimated };
 }
+
+/** ACC delete provider (public API). */
 
 export const sunoProvider = {
   id: "suno",

@@ -1,7 +1,23 @@
 import { deleteAllChats, detectProvider, isSupportedUrl, supportedSitesLabel } from "../lib/deleter.js";
 import { ext, getActiveTab, onRuntimeMessage, sendTabMessage } from "../lib/api.js";
+import { buildGithubBugUrl } from "../lib/github-report.js";
+import { pickLocale, t } from "./i18n.js";
+
+function detectExtensionSurface() {
+  try {
+    const manifest = ext.runtime.getManifest();
+    if (manifest.browser_specific_settings?.gecko) return "Firefox extension";
+    if (/Edg\//.test(navigator.userAgent)) return "Edge extension";
+    return "Chrome extension";
+  } catch {
+    return "Other";
+  }
+}
 
 const $ = (id) => document.getElementById(id);
+const locale = pickLocale();
+const i18n = t(locale);
+document.documentElement.lang = locale;
 
 const deleteButton = $("deleteAll");
 const confirmYes = $("confirmYes");
@@ -12,8 +28,6 @@ const logEl = $("log");
 const debugActions = $("debugActions");
 const copyDebugBtn = $("copyDebug");
 const reportGithubBtn = $("reportGithub");
-const GITHUB_BUG_URL =
-  "https://github.com/benjarogit/claudedeleter/issues/new?template=bug_report.yml&labels=bug";
 const overallBar = $("overallProgress");
 const currentBar = $("currentProgress");
 const overallText = $("overallProgressText");
@@ -24,6 +38,30 @@ const confirmPage = $("confirmPage");
 
 const popupLog = [];
 let lastDebugReport = "";
+let activeProviderId = null;
+
+function applyStaticI18n() {
+  $("subtitle").textContent = i18n.subtitle;
+  deleteButton.textContent = i18n.deleteAll;
+  document.querySelector(".progress-block label:first-of-type").childNodes[0].textContent =
+    `${i18n.overall} `;
+  document.querySelector(".progress-block label:last-of-type").childNodes[0].textContent =
+    `${i18n.currentChat} `;
+  copyDebugBtn.textContent = i18n.copyDebug;
+  reportGithubBtn.textContent = i18n.reportGithub;
+  document.querySelector(".debug-hint").textContent = i18n.debugHint;
+  $("confirmTitle").textContent = i18n.confirmTitle;
+  $("confirmBody").textContent = i18n.confirmBody;
+  confirmYes.textContent = i18n.confirmYes;
+  confirmNo.textContent = i18n.confirmNo;
+  $("footerIdeas").textContent = i18n.footerIdeas;
+  $("footerGithub").textContent = i18n.footerGithub;
+  $("footerSupport").textContent = i18n.footerSupport;
+  $("footerKofi").textContent = i18n.footerKofi;
+  $("footerPatreon").textContent = i18n.footerPatreon;
+}
+
+applyStaticI18n();
 
 function accVersion() {
   try {
@@ -43,7 +81,6 @@ function addLog(message) {
 }
 
 function buildPopupDebugReport(errorMessage) {
-  const tabUrl = lastDebugReport ? null : "see content script report";
   const lines = [
     "=== AI Chat Cleaner — debug report (redacted) ===",
     `version: ${accVersion()}`,
@@ -58,8 +95,6 @@ function buildPopupDebugReport(errorMessage) {
   }
   if (lastDebugReport) {
     lines.push("", "--- content script report ---", lastDebugReport);
-  } else if (tabUrl) {
-    lines.push("", `note: ${tabUrl}`);
   }
   lines.push("", "=== end ===");
   return lines.join("\n");
@@ -99,21 +134,24 @@ async function copyDebugReport() {
   try {
     await navigator.clipboard.writeText(report);
     debugActions.classList.add("copied");
-    addLog("Debug report copied to clipboard.");
+    addLog(i18n.logCopied);
     return report;
   } catch {
-    addLog("Clipboard failed — select text from console or try again.");
+    addLog(i18n.logClipboardFail);
     return report;
   }
 }
 
 async function reportOnGitHub() {
   const report = await copyDebugReport();
-  const body = encodeURIComponent(report.slice(0, 6500));
-  const url = `${GITHUB_BUG_URL}&body=${body}`;
+  const url = buildGithubBugUrl({
+    report,
+    providerId: activeProviderId,
+    surface: detectExtensionSurface(),
+  });
   try {
     await ext.tabs.create({ url });
-    addLog("Opened GitHub issue form (report in body + clipboard).");
+    addLog(i18n.logGithubOpened);
   } catch {
     window.open(url, "_blank", "noopener");
   }
@@ -156,18 +194,18 @@ function setProgress(overall, current) {
 async function init() {
   const tab = await getActiveTab();
   const provider = tab?.url ? detectProvider(tab.url) : null;
+  activeProviderId = provider?.id ?? null;
 
   if (!tab?.url || !isSupportedUrl(tab.url)) {
     deleteButton.disabled = true;
-    status.textContent = `Open a supported site: ${supportedSitesLabel()}.`;
-    addLog("Unsupported tab.");
+    status.textContent = i18n.statusUnsupported(supportedSitesLabel());
+    addLog(i18n.logUnsupported);
     return;
   }
 
   deleteButton.disabled = false;
-  status.textContent = `Ready on ${provider.name}.`;
-  $("subtitle").textContent = supportedSitesLabel();
-  addLog(`Ready (${provider.id}).`);
+  status.textContent = i18n.statusReady(provider.name);
+  addLog(i18n.logReady(provider.id));
 }
 
 deleteButton.addEventListener("click", () => {
@@ -178,7 +216,7 @@ deleteButton.addEventListener("click", () => {
 confirmNo.addEventListener("click", () => {
   confirmPage.hidden = true;
   mainPage.hidden = false;
-  addLog("Cancelled.");
+  addLog(i18n.logCancelled);
 });
 
 copyDebugBtn.addEventListener("click", () => {
@@ -197,12 +235,12 @@ confirmYes.addEventListener("click", async () => {
   setError("");
   lastDebugReport = "";
   resetProgress();
-  status.textContent = "Starting…";
-  addLog("Deletion started.");
+  status.textContent = i18n.starting;
+  addLog(i18n.logStarted);
 
   const tab = await getActiveTab();
   if (!tab?.id) {
-    setError("No active tab.");
+    setError(i18n.errorNoTab);
     deleteButton.disabled = false;
     return;
   }
@@ -210,10 +248,10 @@ confirmYes.addEventListener("click", async () => {
   try {
     await sendTabMessage(tab.id, { action: "deleteAll" });
   } catch (err) {
-    const msg = `Page script unreachable: ${err.message}. Reload the tab and try again.`;
+    const msg = i18n.errorUnreachable(err.message);
     setError(msg, buildPopupDebugReport(msg));
     deleteButton.disabled = false;
-    addLog(`Error: ${err.message}`);
+    addLog(i18n.logError(err.message));
   }
 });
 
@@ -230,13 +268,13 @@ onRuntimeMessage((request) => {
     deleteButton.disabled = false;
     setProgress(request.overall ?? 100, request.current ?? 100);
     status.textContent = request.message || "Done.";
-    addLog("Completed.");
+    addLog(i18n.logCompleted);
   }
 
   if (request.action === "error") {
     deleteButton.disabled = false;
     setError(request.error, request.debugReport);
-    addLog(`Error: ${request.error}`);
+    addLog(i18n.logError(request.error));
   }
 });
 

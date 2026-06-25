@@ -34,6 +34,8 @@ async function deleteSidebarDom(fetchFn, onProgress) {
   return { deleted, total: estimated };
 }
 
+/** ACC delete provider (public API). */
+
 export const metaAiProvider = {
   id: "meta-ai",
   name: "Meta AI",

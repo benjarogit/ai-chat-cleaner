@@ -10,7 +10,7 @@ import {
   KW,
 } from "../dom.js";
 import { navigateTo } from "../navigate.js";
-import { report, runDeleteLoop, sleep } from "../shared.js";
+import { report, sleep } from "../shared.js";
 
 const BEARER =
   "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
@@ -18,10 +18,6 @@ const GROK_SETTINGS_URL = "https://x.com/settings/grok_settings";
 
 /** Fallback hashes from X webpack (see fa0311/TwitterInternalAPIDocument). */
 const KNOWN_GROK_OPS = {
-  ClearGrokConversations: "83Gg0lfI-47Z3-ZOxyUjiQ",
-  CreateGrokConversation: "vvC5uy7pWWHXS2aDi1FZeA",
-  DeleteGrokMessage: "kaH0vdJmbuocpRAeWpRC7A",
-  GrokConversationItemsByRestId: "ed2glRiL1eG88jqeS9Mt4w",
   GrokHistory: "9Hyh5D4-WXLnExZkONSkZg",
 };
 
@@ -111,23 +107,11 @@ async function findGrokGraphqlOp(operationName) {
   return null;
 }
 
-async function gqlPost(hash, operationName, variables, fetchFn) {
-  const url = `https://x.com/i/api/graphql/${hash}/${operationName}`;
-  const response = await fetchFn(url, {
-    method: "POST",
-    headers: gqlHeaders(),
-    credentials: "include",
-    body: JSON.stringify({ variables, queryId: hash }),
-  });
-  if (!response.ok) throw new Error(`${operationName} HTTP ${response.status}`);
-  return response.json();
-}
-
-async function listGrokHistoryDeleteTargets(fetchFn) {
+async function listGrokConversationIds(fetchFn) {
   const historyOp = await findGrokGraphqlOp("GrokHistory");
   if (!historyOp) throw new Error("GrokHistory GraphQL operation not found");
 
-  const targets = [];
+  const ids = [];
   const seen = new Set();
   let cursor = null;
 
@@ -142,10 +126,7 @@ async function listGrokHistoryDeleteTargets(fetchFn) {
       const conversationId = item?.grokConversation?.rest_id;
       if (!conversationId || seen.has(conversationId)) continue;
       seen.add(conversationId);
-      targets.push({
-        conversationId,
-        chatItemId: item?.chat_item_id ?? null,
-      });
+      ids.push(conversationId);
     }
 
     if (!history?.cursor) break;
@@ -153,29 +134,7 @@ async function listGrokHistoryDeleteTargets(fetchFn) {
     await sleep(300);
   }
 
-  return targets;
-}
-
-async function listGrokConversationIds(fetchFn) {
-  return (await listGrokHistoryDeleteTargets(fetchFn)).map((t) => t.conversationId);
-}
-
-async function resolveChatItemId(conversationId, fetchFn) {
-  const itemsOp = await findGrokGraphqlOp("GrokConversationItemsByRestId");
-  if (!itemsOp) return null;
-
-  const json = await gqlGet(
-    itemsOp.hash,
-    "GrokConversationItemsByRestId",
-    { restId: conversationId },
-    fetchFn
-  );
-  const items = json?.data?.grok_conversation_items_by_rest_id?.items || [];
-  for (const item of items) {
-    const id = item?.chat_item_id ?? item?.message?.chat_item_id;
-    if (id) return id;
-  }
-  return null;
+  return ids;
 }
 
 function isGrokHistoryEmptyDom() {
@@ -207,48 +166,6 @@ async function assertGrokGone(fetchFn) {
   if (parts.length) {
     throw new Error(`Grok chats still remain (${parts.join(", ")})`);
   }
-}
-
-async function deleteAllViaGraphql(fetchFn, onProgress, delayMs) {
-  const op = await findGrokGraphqlOp("DeleteGrokMessage");
-  if (!op) throw new Error("DeleteGrokMessage GraphQL operation not found");
-
-  let targets = await listGrokHistoryDeleteTargets(fetchFn);
-  if (!targets.length) {
-    await openHistoryPanel();
-    if (countGrokHistoryDom() > 0) {
-      throw new Error("API listed 0 Grok chats but history UI still has items");
-    }
-    return { deleted: 0, total: 0 };
-  }
-
-  for (const target of targets) {
-    if (!target.chatItemId) {
-      target.chatItemId = await resolveChatItemId(target.conversationId, fetchFn);
-    }
-  }
-  targets = targets.filter((t) => t.chatItemId);
-  if (!targets.length) {
-    throw new Error("Grok history listed conversations but no chat_item_id could be resolved");
-  }
-
-  const result = await runDeleteLoop({
-    ids: targets,
-    delayMs,
-    label: "Grok chat",
-    onProgress,
-    deleteOne: async ({ conversationId, chatItemId }) => {
-      await gqlPost(
-        op.hash,
-        op.operationName,
-        { conversation_id: conversationId, chat_item_id: chatItemId },
-        fetchFn
-      );
-    },
-  });
-
-  await assertGrokGone(fetchFn);
-  return result;
 }
 
 async function openHistoryPanel() {
@@ -339,6 +256,8 @@ async function deleteAllSettingsDom(ctx) {
   return { deleted: "all", total: "all" };
 }
 
+/** ACC delete provider (public API). */
+
 export const grokXProvider = {
   id: "grok-x",
   name: "Grok on X",
@@ -356,18 +275,13 @@ export const grokXProvider = {
     }
   },
 
-  /** Best first: history panel ⋮ → GraphQL → settings bulk */
+  /** Best first: history panel ⋮ → settings bulk (DeleteGrokMessage is rate-limited on X). */
   async getDeleteMethods(ctx) {
     return [
       {
         name: "dom-history",
         step: "dom-history",
         fn: () => deleteHistoryDom(ctx.fetchFn, ctx.onProgress),
-      },
-      {
-        name: "api-graphql-individual",
-        step: null,
-        fn: () => deleteAllViaGraphql(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
       },
       { name: "dom-settings", step: "settings-delete", fn: () => deleteAllSettingsDom(ctx) },
     ];

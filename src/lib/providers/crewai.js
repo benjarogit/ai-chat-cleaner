@@ -7,6 +7,12 @@ import {
 } from "../dom.js";
 import { runDeleteLoop } from "../shared.js";
 
+function crewAiCsrf() {
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+  if (!token) throw new Error("CrewAI CSRF token missing — open studio/v2 while logged in");
+  return token;
+}
+
 async function listProjectIds(fetchFn) {
   const response = await fetchFn("/studio/v2/projects", {
     credentials: "include",
@@ -53,7 +59,7 @@ async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
       const response = await fetchFn(`/studio/v2/projects/${id}`, {
         method: "DELETE",
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "x-csrf-token": crewAiCsrf() },
       });
       if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
     },
@@ -75,13 +81,15 @@ async function deleteStudioDom(fetchFn, onProgress) {
   return { deleted, total: estimated };
 }
 
+/** ACC delete provider (public API). */
+
 export const crewAiProvider = {
   id: "crewai",
   name: "CrewAI",
   match(url) {
     try {
       const u = new URL(url);
-      return u.hostname === "app.crewai.com" && u.pathname.startsWith("/studio");
+      return u.hostname === "app.crewai.com" && u.pathname.startsWith("/studio/v2");
     } catch {
       return false;
     }

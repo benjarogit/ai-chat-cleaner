@@ -119,6 +119,8 @@ async function deleteAllViaDom(fetchFn, onProgress, delayMs) {
   return { deleted, total: before };
 }
 
+/** ACC delete provider (public API). */
+
 export const deepseekProvider = {
   id: "deepseek",
   name: "DeepSeek",

@@ -1,4 +1,4 @@
-/** In-memory session log — redacted, safe to share. */
+/** @file Session debug log with redaction for user-facing bug reports. */
 
 const MAX_ENTRIES = 80;
 const entries = [];
@@ -12,9 +12,16 @@ const REDACT = [
   [/\/c\/[0-9a-f-]{36}/gi, "/c/[id]"],
   [/\/app\/[a-zA-Z0-9_-]{8,}/gi, "/app/[id]"],
   [/\/chat\/[a-f0-9-]{36}/gi, "/chat/[id]"],
-  [/[?&](?:rid|uuid|token|key)=[^&\s#]+/gi, (m) => m.replace(/=.*/, "=[REDACTED]")],
+  [/\/studio\/v2\/projects\/[0-9a-f-]{36}/gi, "/studio/v2/projects/[id]"],
+  [/\/api\/(?:clip|gen)\/[A-Za-z0-9_-]{8,}/gi, (m) => m.replace(/\/[^/]+$/, "/[id]")],
+  [/[?&](?:rid|uuid|token|key|csrf|session)=[^&\s#]+/gi, (m) => m.replace(/=.*/, "=[REDACTED]")],
+  [/x-csrf-token:\s*[^\s"']+/gi, "x-csrf-token: [REDACTED]"],
+  [/csrf-token["']?\s*(?:content|:)\s*["']?[A-Za-z0-9+/=_-]{16,}/gi, "csrf-token [REDACTED]"],
+  [/eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[JWT]"],
+  [/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "[uuid]"],
 ];
 
+/** Redact sensitive substrings from log lines. @param {*} value @returns {string} */
 export function redact(value) {
   if (value == null) return "";
   let text = String(value);
@@ -29,6 +36,7 @@ function push(level, data) {
   while (entries.length > MAX_ENTRIES) entries.shift();
 }
 
+/** Start a new delete-run log session. @param {object} [meta] */
 export function debugLogStart(meta = {}) {
   entries.length = 0;
   runId = Date.now().toString(36);
@@ -36,10 +44,12 @@ export function debugLogStart(meta = {}) {
   push("info", { message: "delete run started", ...meta });
 }
 
+/** Append a redacted log entry. @param {string} level @param {string} message @param {object} [extra] */
 export function debugLog(level, message, extra = {}) {
   push(level, { message: redact(message), ...extra });
 }
 
+/** Log an error with redacted stack. @param {Error} error @param {object} [extra] */
 export function debugLogError(error, extra = {}) {
   push("error", {
     message: redact(error?.message || String(error)),
@@ -107,6 +117,7 @@ export function formatDebugReport({ version, url, provider, error } = {}) {
   return lines.join("\n");
 }
 
+/** Format the current session as a shareable debug report. @param {object} [extra] @returns {string} */
 export function getDebugReport(extra = {}) {
   return formatDebugReport(extra);
 }

@@ -175,6 +175,8 @@ async function deleteSidebarMenus(onProgress, fetchFn) {
   return { deleted, total: deleted };
 }
 
+/** ACC delete provider (public API). */
+
 export const chatgptProvider = {
   id: "chatgpt",
   name: "ChatGPT",

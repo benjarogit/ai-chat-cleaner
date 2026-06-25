@@ -34,8 +34,8 @@
   </main>
 
   <section id="confirmPage" hidden>
-    <h2>Confirm deletion</h2>
-    <p>Delete <strong>all</strong> conversations? This cannot be undone.</p>
+    <h2 id="confirmTitle">Confirm deletion</h2>
+    <p id="confirmBody">Delete all conversations? This cannot be undone.</p>
     <div class="actions">
       <button id="confirmYes" type="button" class="danger">Yes, delete all</button>
       <button id="confirmNo" type="button" class="secondary">Cancel</button>
@@ -45,9 +45,14 @@
   <footer>
     <a href="https://sunnyc.de" target="_blank" rel="noopener">Sunny C.</a>
     ·
-    <a href="https://github.com/benjarogit/claudedeleter/issues/new?template=feature_request.yml" target="_blank" rel="noopener">Ideas</a>
+    <a id="footerIdeas" href="https://github.com/benjarogit/ai-chat-cleaner/issues/new?template=feature_request.yml" target="_blank" rel="noopener">Ideas</a>
     ·
-    <a href="https://github.com/benjarogit/claudedeleter" target="_blank" rel="noopener">GitHub</a>
+    <a id="footerGithub" href="https://github.com/benjarogit/ai-chat-cleaner" target="_blank" rel="noopener">GitHub</a>
+    ·
+    <span id="footerSupport">Support</span>
+    <a id="footerKofi" href="https://ko-fi.com/aichatcleaner" target="_blank" rel="noopener">Ko-fi</a>
+    ·
+    <a id="footerPatreon" href="https://patreon.com/aichatcleaner" target="_blank" rel="noopener">Patreon</a>
   </footer>
 
   <script src="popup.js"></script>

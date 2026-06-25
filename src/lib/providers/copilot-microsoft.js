@@ -1,78 +1,28 @@
 import {
-  confirmDialogs,
   countCopilotMicrosoftSidebarChats,
   deleteCopilotMicrosoftViaSidebar,
   findCopilotMicrosoftChatLinks,
 } from "../dom.js";
-import { runDeleteLoop } from "../shared.js";
 
-const API = "https://copilot.microsoft.com/c/api/conversations";
-
-async function listConversationIds(fetchFn) {
-  const response = await fetchFn(`${API}?types=chat,character,xbox,group`, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`list HTTP ${response.status}`);
-
-  const data = await response.json();
-  return (data.results || []).map((c) => c.id).filter(Boolean);
-}
-
-async function assertGone(fetchFn) {
-  let apiCount = null;
-  try {
-    apiCount = (await listConversationIds(fetchFn)).length;
-  } catch {
-    /* DOM */
-  }
-
+async function assertGone() {
   const domCount = countCopilotMicrosoftSidebarChats();
-  const parts = [];
-  if (apiCount > 0) parts.push(`${apiCount} in API`);
-  if (domCount > 0) parts.push(`${domCount} visible in sidebar`);
-  if (parts.length) {
-    throw new Error(`Microsoft Copilot chats still remain (${parts.join(", ")})`);
+  if (domCount > 0) {
+    throw new Error(`Microsoft Copilot chats still remain (${domCount} visible in sidebar)`);
   }
 }
 
-async function deleteAllOneByOne(fetchFn, onProgress, delayMs) {
-  const ids = await listConversationIds(fetchFn);
-  if (!ids.length) {
-    const domCount = countCopilotMicrosoftSidebarChats();
-    if (domCount > 0) throw new Error(`API listed 0 chats but ${domCount} visible in sidebar`);
-    return { deleted: 0, total: 0 };
-  }
-
-  const result = await runDeleteLoop({
-    ids,
-    delayMs,
-    label: "chat",
-    onProgress,
-    deleteOne: async (id) => {
-      const response = await fetchFn(`${API}/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) throw new Error(`delete ${id} HTTP ${response.status}`);
-    },
-  });
-
-  await assertGone(fetchFn);
-  return result;
-}
-
-async function deleteSidebarDom(fetchFn, onProgress) {
+async function deleteSidebarDom(onProgress) {
   const estimated = Math.max(countCopilotMicrosoftSidebarChats(), 1);
   if (!findCopilotMicrosoftChatLinks().length) return { deleted: 0, total: 0 };
 
   let deleted = await deleteCopilotMicrosoftViaSidebar(onProgress);
   if (!deleted) throw new Error("No Microsoft Copilot sidebar delete controls found");
 
-  await assertGone(fetchFn);
+  await assertGone();
   return { deleted, total: estimated };
 }
+
+/** ACC delete provider (public API). */
 
 export const copilotMicrosoftProvider = {
   id: "copilot-microsoft",
@@ -85,39 +35,24 @@ export const copilotMicrosoftProvider = {
     }
   },
 
-  /** Live: api-individual → dom-sidebar */
+  /** Live: dom-sidebar only (conversations API lists nothing / DELETE 404 on current UI) */
   async getDeleteMethods(ctx) {
-    let apiIds = [];
-    try {
-      apiIds = await listConversationIds(ctx.fetchFn);
-    } catch {
-      /* cookie session unavailable */
-    }
     const domCount = countCopilotMicrosoftSidebarChats();
 
-    if (!apiIds.length && !domCount) {
+    if (!domCount) {
       return [{ name: "noop", step: null, fn: () => ({ deleted: 0, total: 0 }) }];
     }
 
-    const methods = [];
-    if (apiIds.length > 0) {
-      methods.push({
-        name: "api-individual",
-        step: null,
-        fn: () => deleteAllOneByOne(ctx.fetchFn, ctx.onProgress, ctx.delayMs),
-      });
-    }
-    if (domCount > 0) {
-      methods.push({
+    return [
+      {
         name: "dom-sidebar",
         step: null,
-        fn: () => deleteSidebarDom(ctx.fetchFn, ctx.onProgress),
-      });
-    }
-    return methods;
+        fn: () => deleteSidebarDom(ctx.onProgress),
+      },
+    ];
   },
 
-  async verifyGone(ctx) {
-    await assertGone(ctx.fetchFn);
+  async verifyGone() {
+    await assertGone();
   },
 };

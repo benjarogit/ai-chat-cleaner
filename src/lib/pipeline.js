@@ -1,3 +1,4 @@
+/** @file Delete pipeline — method fallbacks, verify-after-reload. */
 import { debugLog } from "./debug-log.js";
 import { clearPending, getPending, NavigationResumeError, setPending } from "./navigate.js";
 import { report } from "./shared.js";
@@ -53,6 +54,7 @@ export async function runDeletePipeline(ctx, provider, { beginPostVerify }) {
   );
 }
 
+/** Resume pipeline after a navigation step. */
 export async function resumePipelineMethod(ctx, provider, pending, { beginPostVerify }) {
   const methods = await provider.getDeleteMethods(ctx);
   let index = pending.methodIndex;
@@ -80,6 +82,7 @@ export async function resumePipelineMethod(ctx, provider, pending, { beginPostVe
   return beginPostVerify(ctx, provider, { ...result, method: method.name }, index);
 }
 
+/** Handle verify failure — try next fallback method. */
 export async function handleVerifyFailure(ctx, provider, pending, error) {
   const methods = await provider.getDeleteMethods(ctx);
   const nextIndex = (pending.methodIndex ?? 0) + 1;

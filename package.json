@@ -1,8 +1,8 @@
 {
   "name": "ai-chat-cleaner",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "AI Chat Cleaner (ACC) — bulk-delete claude.ai conversations",
+  "description": "AI Chat Cleaner (ACC) — bulk-delete AI chat history on 18 platforms",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs"
@@ -15,6 +15,6 @@
   "homepage": "https://sunnyc.de",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benjarogit/claudedeleter.git"
+    "url": "https://github.com/benjarogit/ai-chat-cleaner.git"
   }
 }

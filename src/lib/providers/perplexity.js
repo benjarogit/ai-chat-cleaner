@@ -91,6 +91,8 @@ async function deleteSidebarDom(fetchFn, onProgress) {
   return { deleted, total: estimated };
 }
 
+/** ACC delete provider (public API). */
+
 export const perplexityProvider = {
   id: "perplexity",
   name: "Perplexity",
