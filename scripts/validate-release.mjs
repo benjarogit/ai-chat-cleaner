@@ -21,6 +21,7 @@ const REQUIRED_HOSTS = [
   "github.com/copilot",
   "api.individual.githubcopilot.com",
   "copilot.microsoft.com",
+  "copilot.com",
   "cursor.com",
   "myactivity.google.com",
 ];
@@ -54,6 +55,8 @@ const MATCH_CASES = [
   ["https://github.com/copilot", "copilot-github"],
   ["https://github.com/copilot/c/abc", "copilot-github"],
   ["https://copilot.microsoft.com/", "copilot-microsoft"],
+  ["https://copilot.com/", "copilot-microsoft"],
+  ["https://www.copilot.com/chats", "copilot-microsoft"],
   ["https://cursor.com/agents", "cursor"],
   ["https://cursor.com/agents/bc-1", "cursor"],
 ];
@@ -106,7 +109,7 @@ for (const manifest of ["manifests/chrome.json", "manifests/firefox.json"]) {
   for (const host of REQUIRED_HOSTS) {
     if (!hosts.includes(host)) errors.push(`${manifest}: missing host_permissions ${host}`);
   }
-  for (const host of ["claude.ai", "chatgpt.com", "gemini.google.com", "grok.com", "x.com/i/grok", "github.com/copilot", "copilot.microsoft.com", "cursor.com/agents", "myactivity.google.com", "x.com/settings"]) {
+  for (const host of ["claude.ai", "chatgpt.com", "gemini.google.com", "grok.com", "x.com/i/grok", "github.com/copilot", "copilot.microsoft.com", "copilot.com", "cursor.com/agents", "myactivity.google.com", "x.com/settings"]) {
     if (!matches.includes(host)) errors.push(`${manifest}: missing content_scripts ${host}`);
   }
   for (const host of FORBIDDEN_HOSTS) {

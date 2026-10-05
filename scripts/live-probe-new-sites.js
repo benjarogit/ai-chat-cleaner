@@ -68,7 +68,7 @@
     return R;
   }
 
-  if (host === "copilot.microsoft.com") {
+  if (host === "copilot.microsoft.com" || host === "copilot.com" || host === "www.copilot.com") {
     const list = await fetch("/c/api/conversations?types=chat,character,xbox,group", {
       credentials: "include",
     }).then((r) => r.json());

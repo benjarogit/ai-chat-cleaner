@@ -37,6 +37,8 @@
     "https://github.com/copilot*",
     "https://api.individual.githubcopilot.com/*",
     "https://copilot.microsoft.com/*",
+    "https://copilot.com/*",
+    "https://www.copilot.com/*",
     "https://cursor.com/*"
   ],
   "content_scripts": [
@@ -53,6 +55,8 @@
         "https://x.com/settings/*",
         "https://github.com/copilot*",
         "https://copilot.microsoft.com/*",
+        "https://copilot.com/*",
+        "https://www.copilot.com/*",
         "https://cursor.com/agents*"
       ],
       "js": ["content.js"],

@@ -26,7 +26,7 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 | Grok | [grok.com](https://grok.com) |
 | Grok on X | [x.com/i/grok](https://x.com/i/grok) |
 | GitHub Copilot | [github.com/copilot](https://github.com/copilot) |
-| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) |
+| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) (also [copilot.com](https://copilot.com)) |
 | Cursor | [cursor.com/agents](https://cursor.com/agents) · [50% off referral](https://cursor.com/referral?code=UW6WJZLB8ECL) |
 
 ---

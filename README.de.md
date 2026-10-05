@@ -26,7 +26,7 @@ Open-Source-Browser-Erweiterung (MIT). Löscht alle Unterhaltungen auf unterstü
 | Grok | [grok.com](https://grok.com) |
 | Grok auf X | [x.com/i/grok](https://x.com/i/grok) |
 | GitHub Copilot | [github.com/copilot](https://github.com/copilot) |
-| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) |
+| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) (auch [copilot.com](https://copilot.com)) |
 | Cursor | [cursor.com/agents](https://cursor.com/agents) · [50% Rabatt Referral](https://cursor.com/referral?code=UW6WJZLB8ECL) |
 
 ---
