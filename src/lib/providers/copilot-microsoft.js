@@ -39,7 +39,13 @@ export const copilotMicrosoftProvider = {
   name: "Microsoft Copilot",
   match(url) {
     try {
-      return new URL(url).hostname === "copilot.microsoft.com";
+      const host = new URL(url).hostname;
+      return (
+        host === "copilot.microsoft.com" ||
+        host === "www.copilot.microsoft.com" ||
+        host === "copilot.com" ||
+        host === "www.copilot.com"
+      );
     } catch {
       return false;
     }

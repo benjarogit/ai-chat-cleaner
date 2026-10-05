@@ -112,6 +112,7 @@ async function buildExtension({ id, manifest, zip, xpi, readme }) {
   await bundle(join(root, "src/background.js"), join(out, "background.js"));
   await bundle(join(root, "src/popup/popup.js"), join(out, "popup/popup.js"));
   copyFileSync(join(root, "src/page-main.js"), join(out, "page-main.js"));
+  copyFileSync(join(root, "src/spa-hook.js"), join(out, "spa-hook.js"));
 
   copyFileSync(join(root, "src/popup/popup.html"), join(out, "popup/popup.html"));
   copyFileSync(join(root, "src/popup/popup.css"), join(out, "popup/popup.css"));
@@ -159,7 +160,7 @@ async function buildConsole() {
     join(dist, "CONSOLE-README.txt"),
     [
       "AI Chat Cleaner — console script (no extension)",
-      "Supported: claude.ai, chatgpt.com, gemini.google.com, grok.com, x.com/i/grok, chat.deepseek.com, perplexity.ai, github.com/copilot",
+      "Supported: claude.ai, chatgpt.com, gemini.google.com, grok.com, x.com/i/grok, github.com/copilot, copilot.microsoft.com, cursor.com/agents",
       "2. Open DevTools → Console",
       "3. Paste acc-console.js and press Enter",
       "",

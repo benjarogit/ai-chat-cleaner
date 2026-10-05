@@ -237,4 +237,4 @@ export async function deleteAllChats(options = {}) {
   }
 }
 
-export { detectProvider, isSupportedUrl, supportedSitesLabel } from "./registry.js";
+export { detectProvider, isSupportedUrl, supportHint, supportedSitesLabel } from "./registry.js";

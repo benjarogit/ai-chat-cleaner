@@ -14,6 +14,7 @@ const STRINGS = {
   en: {
     subtitle: "Bulk-delete AI chat history",
     statusUnsupported: (sites) => `Open a supported site: ${sites}.`,
+    statusWrongPath: (name, url) => `On ${name}. Open ${url} first.`,
     statusReady: (name) => `Ready on ${name}.`,
     deleteAll: "Delete all chats",
     overall: "Overall",
@@ -31,6 +32,7 @@ const STRINGS = {
     footerKofi: "Ko-fi",
     footerPatreon: "Patreon",
     logUnsupported: "Unsupported tab.",
+    logWrongPath: (url) => `Open ${url} on this site.`,
     logReady: (id) => `Ready (${id}).`,
     logCancelled: "Cancelled.",
     logStarted: "Deletion started.",
@@ -48,6 +50,7 @@ const STRINGS = {
   de: {
     subtitle: "KI-Chat-Verlauf massenhaft löschen",
     statusUnsupported: (sites) => `Unterstützte Seite öffnen: ${sites}.`,
+    statusWrongPath: (name, url) => `Auf ${name}. Bitte zuerst ${url} öffnen.`,
     statusReady: (name) => `Bereit auf ${name}.`,
     deleteAll: "Alle Chats löschen",
     overall: "Gesamt",
@@ -65,6 +68,7 @@ const STRINGS = {
     footerKofi: "Ko-fi",
     footerPatreon: "Patreon",
     logUnsupported: "Tab nicht unterstützt.",
+    logWrongPath: (url) => `Auf dieser Seite ${url} öffnen.`,
     logReady: (id) => `Bereit (${id}).`,
     logCancelled: "Abgebrochen.",
     logStarted: "Löschen gestartet.",

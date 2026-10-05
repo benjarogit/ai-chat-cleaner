@@ -8,7 +8,7 @@
 [![Firefox AMO](https://img.shields.io/amo/v/ai-chat-cleaner1?label=Firefox%20AMO)](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Bulk-delete all your AI chat history — one click, 21 platforms.**
+**Bulk-delete all your AI chat history — one click, 8 platforms.**
 
 [Deutsch](README.de.md) · [Releases](https://github.com/benjarogit/ai-chat-cleaner/releases) · [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-cleaner1/) · [Sunny C.](https://sunnyc.de)
 
@@ -16,7 +16,7 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 
 ---
 
-## Supported sites (21)
+## Supported sites (8)
 
 | Platform | URL |
 |----------|-----|
@@ -25,24 +25,9 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 | Gemini | [gemini.google.com](https://gemini.google.com) |
 | Grok | [grok.com](https://grok.com) |
 | Grok on X | [x.com/i/grok](https://x.com/i/grok) |
-| DeepSeek | [chat.deepseek.com](https://chat.deepseek.com) |
-| Perplexity | [perplexity.ai](https://www.perplexity.ai) |
 | GitHub Copilot | [github.com/copilot](https://github.com/copilot) |
-| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) |
-| Mistral | [chat.mistral.ai](https://chat.mistral.ai) |
-| Pi | [pi.ai/talk](https://pi.ai/talk) |
-| Meta AI | [meta.ai](https://www.meta.ai) |
-| Poe | [poe.com](https://poe.com) |
-| Kagi Assistant | [assistant.kagi.com](https://assistant.kagi.com) |
-| Suno (clips/songs) | [suno.com](https://suno.com) |
-| Manus | [manus.im/app](https://manus.im/app) |
-| AgentGPT | [agentgpt.reworkd.ai](https://agentgpt.reworkd.ai) |
-| CrewAI | [app.crewai.com/studio/v2](https://app.crewai.com/studio/v2) |
-| MiniMax | [agent.minimax.io](https://agent.minimax.io) |
-| Z.ai | [chat.z.ai](https://chat.z.ai) |
+| Microsoft Copilot | [copilot.microsoft.com](https://copilot.microsoft.com) (also [copilot.com](https://copilot.com)) |
 | Cursor | [cursor.com/agents](https://cursor.com/agents) · [50% off referral](https://cursor.com/referral?code=UW6WJZLB8ECL) |
-
-> **Suno** deletes library clips/songs, not chat threads. **CrewAI** deletes Studio automation projects.
 
 ---
 
@@ -58,10 +43,14 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 
 **Android:** Install from AMO or sideload the `.xpi`.
 
-### Chrome / Edge
+### Chrome / Edge / Brave
 
 1. Download [`acc-chrome.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) or [`acc-edge.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest).
 2. Unzip → `chrome://extensions` or `edge://extensions` → **Developer mode** → **Load unpacked**.
+
+Brave uses the Chrome build (install from the Chrome Web Store, or load `acc-chrome.zip`). Shields can block a site's own delete requests; if a run fails, allow the site in Shields and try again.
+
+Safari is a later step. It needs a Mac, Xcode, and `xcrun safari-web-extension-converter dist/chrome`, then signing for the App Store. Safari also asks you to allow the extension per website.
 
 ### Without an extension (bookmarklet / console)
 
@@ -100,7 +89,7 @@ Permissions used: `storage` (preferences), `alarms` (batch deletion scheduling),
 
 ## Support the project
 
-ACC is free and open source. Optional support helps maintenance across 21 platforms:
+ACC is free and open source. Optional support helps maintenance across 8 platforms:
 
 - [Ko-fi](https://ko-fi.com/aichatcleaner) — one-time tips
 - [Patreon](https://www.patreon.com/SunnyCueq) — Supporter tier (3 €/month)
@@ -120,22 +109,9 @@ API-first on every platform; DOM fallbacks if the internal API is unavailable.
 | Gemini | batchexecute API | Sidebar → My Activity |
 | Grok.com | Bulk API | Individual API → History UI |
 | Grok on X | History DOM | Settings (delete all) |
-| DeepSeek | Bulk API | Individual API → Sidebar |
-| Perplexity | Individual API | Sidebar session actions |
 | GitHub Copilot | Bulk API | Individual API → Manage chat |
 | Microsoft Copilot | Sidebar DOM | — |
-| Mistral | tRPC chat.delete | Sidebar |
-| Pi | REST DELETE | Conversation options |
-| Meta AI | Sidebar More options | — |
-| Poe | History page DOM | — |
-| Kagi Assistant | REST DELETE | Sidebar |
-| Suno | Clip API (Clerk auth) | Library menu |
-| Manus | Connect-RPC (if auth) | Sidebar DOM |
-| AgentGPT | Sidebar DOM | — |
-| CrewAI | REST DELETE projects | Studio menu |
-| MiniMax | REST API | Sidebar DOM |
-| Z.ai | REST DELETE | Sidebar DOM |
-| Cursor | DOM-read + API delete | Sidebar DOM |
+| Cursor | DOM-read + API archive | Sidebar DOM |
 
 ---
 
