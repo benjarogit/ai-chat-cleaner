@@ -189,7 +189,8 @@ export const grokComProvider = {
   name: "Grok",
   match(url) {
     try {
-      return new URL(url).hostname === "grok.com";
+      const h = new URL(url).hostname;
+      return h === "grok.com" || h === "www.grok.com";
     } catch {
       return false;
     }

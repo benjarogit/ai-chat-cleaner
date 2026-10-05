@@ -253,6 +253,16 @@
     });
   }
 
+  if (host === "cursor.com" && location.pathname.startsWith("/agents")) {
+    await test("dom-agents", async () => {
+      const links = [...document.querySelectorAll("a[data-composer-id]")];
+      return {
+        domCount: links.length,
+        bcIds: links.slice(0, 5).map((a) => a.dataset.composerId),
+      };
+    });
+  }
+
   console.log("ACC E2E", out);
   return out;
 })();
