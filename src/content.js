@@ -73,6 +73,7 @@ async function runDelete(options = {}) {
 }
 
 function resumeDelete() {
+  if (!detectProvider(location.href)) return;
   return tryResumeDelete({ onProgress: wireProgress() }).catch((error) => {
     if (error?.name === "NavigationResumeError") return;
     // Storage/resume glitches on load should not flash errors in the popup.
@@ -104,4 +105,21 @@ onRuntimeMessage((request, _sender, sendResponse) => {
   }
 });
 
+/** Re-check the path after in-page navigations on x.com, GitHub, and Cursor. */
+function watchSpaNavigation() {
+  let lastUrl = location.href;
+
+  const onNavigate = () => {
+    if (location.href === lastUrl) return;
+    lastUrl = location.href;
+    resumeDelete();
+  };
+
+  // spa-hook.js (MAIN world) patches the page's history and fires this event.
+  window.addEventListener("acc-spa-navigate", () => queueMicrotask(onNavigate));
+  window.addEventListener("popstate", () => queueMicrotask(onNavigate));
+  globalThis.navigation?.addEventListener?.("navigatesuccess", () => queueMicrotask(onNavigate));
+}
+
+watchSpaNavigation();
 resumeDelete();

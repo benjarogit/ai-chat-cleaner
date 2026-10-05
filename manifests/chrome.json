@@ -34,7 +34,7 @@
     "https://grok.com/*",
     "https://www.grok.com/*",
     "https://x.com/*",
-    "https://github.com/copilot*",
+    "https://github.com/*",
     "https://api.individual.githubcopilot.com/*",
     "https://copilot.microsoft.com/*",
     "https://copilot.com/*",
@@ -51,13 +51,12 @@
         "https://myactivity.google.com/*",
         "https://grok.com/*",
         "https://www.grok.com/*",
-        "https://x.com/i/grok*",
-        "https://x.com/settings/*",
-        "https://github.com/copilot*",
+        "https://x.com/*",
+        "https://github.com/*",
         "https://copilot.microsoft.com/*",
         "https://copilot.com/*",
         "https://www.copilot.com/*",
-        "https://cursor.com/agents*"
+        "https://cursor.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
@@ -66,6 +65,16 @@
       "matches": ["https://gemini.google.com/*"],
       "js": ["page-main.js"],
       "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://github.com/*",
+        "https://cursor.com/*"
+      ],
+      "js": ["spa-hook.js"],
+      "run_at": "document_start",
       "world": "MAIN"
     }
   ]

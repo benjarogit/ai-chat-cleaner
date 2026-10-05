@@ -38,7 +38,7 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "deleteAll" || message.action === "updateProgress") {
-    api.alarms.create(ALARM_NAME, { periodInMinutes: 0.4 });
+    api.alarms.create(ALARM_NAME, { periodInMinutes: 0.5 });
   }
   if (message.action === "complete" || message.action === "error") {
     api.alarms.clear(ALARM_NAME);

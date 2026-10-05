@@ -1,4 +1,4 @@
-import { deleteAllChats, detectProvider, isSupportedUrl, supportedSitesLabel } from "../lib/deleter.js";
+import { deleteAllChats, supportHint, supportedSitesLabel } from "../lib/deleter.js";
 import { ext, getActiveTab, onRuntimeMessage, sendTabMessage } from "../lib/api.js";
 import { buildGithubBugUrl } from "../lib/github-report.js";
 import { pickLocale, setLocale, t } from "./i18n.js";
@@ -204,10 +204,17 @@ function setProgress(overall, current) {
 
 async function init() {
   const tab = await getActiveTab();
-  const provider = tab?.url ? detectProvider(tab.url) : null;
-  activeProviderId = provider?.id ?? null;
+  const hint = tab?.url ? supportHint(tab.url) : { state: "unsupported" };
+  activeProviderId = hint.provider?.id ?? null;
 
-  if (!tab?.url || !isSupportedUrl(tab.url)) {
+  if (hint.state === "wrong-path") {
+    deleteButton.disabled = true;
+    status.textContent = i18n.statusWrongPath(hint.name, hint.open);
+    addLog(i18n.logWrongPath(hint.open));
+    return;
+  }
+
+  if (hint.state !== "ready") {
     deleteButton.disabled = true;
     status.textContent = i18n.statusUnsupported(supportedSitesLabel());
     addLog(i18n.logUnsupported);
@@ -215,8 +222,8 @@ async function init() {
   }
 
   deleteButton.disabled = false;
-  status.textContent = i18n.statusReady(provider.name);
-  addLog(i18n.logReady(provider.id));
+  status.textContent = i18n.statusReady(hint.provider.name);
+  addLog(i18n.logReady(hint.provider.id));
 }
 
 deleteButton.addEventListener("click", () => {

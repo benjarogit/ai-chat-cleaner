@@ -8,7 +8,7 @@ All notable changes to AI Chat Cleaner (ACC) are documented here.
 
 - Supported set is now **8 platforms**: Claude, ChatGPT, Gemini, Grok, Grok on X, GitHub Copilot, Microsoft Copilot, and Cursor.
 - Removed DeepSeek, Perplexity, Mistral, Pi, Meta AI, Poe, Kagi Assistant, Suno, Manus, AgentGPT, CrewAI, MiniMax, and Z.ai.
-- Content scripts inject only on the pages those eight products use (plus the Gemini My Activity and Grok settings fallbacks required for deletion to finish).
+- Content scripts stay on the eight products. On x.com, github.com, and cursor.com they inject for the whole domain so in-page navigation still reaches `/i/grok`, `/copilot`, and `/agents`. The popup names the path to open when the tab is on the right host but the wrong page.
 - Microsoft Copilot also matches `copilot.com`, which is where `copilot.microsoft.com` currently opens in the browser.
 
 ## [1.0.0] — 2026-06-25

@@ -43,10 +43,14 @@ Open-source browser extension (MIT). Delete every conversation on supported AI s
 
 **Android:** Install from AMO or sideload the `.xpi`.
 
-### Chrome / Edge
+### Chrome / Edge / Brave
 
 1. Download [`acc-chrome.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) or [`acc-edge.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest).
 2. Unzip → `chrome://extensions` or `edge://extensions` → **Developer mode** → **Load unpacked**.
+
+Brave uses the Chrome build (install from the Chrome Web Store, or load `acc-chrome.zip`). Shields can block a site's own delete requests; if a run fails, allow the site in Shields and try again.
+
+Safari is a later step. It needs a Mac, Xcode, and `xcrun safari-web-extension-converter dist/chrome`, then signing for the App Store. Safari also asks you to allow the extension per website.
 
 ### Without an extension (bookmarklet / console)
 

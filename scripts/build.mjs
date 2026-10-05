@@ -112,6 +112,7 @@ async function buildExtension({ id, manifest, zip, xpi, readme }) {
   await bundle(join(root, "src/background.js"), join(out, "background.js"));
   await bundle(join(root, "src/popup/popup.js"), join(out, "popup/popup.js"));
   copyFileSync(join(root, "src/page-main.js"), join(out, "page-main.js"));
+  copyFileSync(join(root, "src/spa-hook.js"), join(out, "spa-hook.js"));
 
   copyFileSync(join(root, "src/popup/popup.html"), join(out, "popup/popup.html"));
   copyFileSync(join(root, "src/popup/popup.css"), join(out, "popup/popup.css"));

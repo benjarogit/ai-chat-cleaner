@@ -3,7 +3,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { detectProvider, providers, supportedSitesLabel } from "../src/lib/registry.js";
+import { detectProvider, providers, supportHint, supportedSitesLabel } from "../src/lib/registry.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -18,7 +18,7 @@ const REQUIRED_HOSTS = [
   "gemini.google.com",
   "grok.com",
   "x.com",
-  "github.com/copilot",
+  "github.com",
   "api.individual.githubcopilot.com",
   "copilot.microsoft.com",
   "copilot.com",
@@ -98,6 +98,20 @@ for (const url of REJECT_CASES) {
   if (found) errors.push(`detectProvider(${url}) should be null, got ${found.id}`);
 }
 
+const HINT_CASES = [
+  ["https://x.com/home", "wrong-path", "https://x.com/i/grok"],
+  ["https://github.com/", "wrong-path", "https://github.com/copilot"],
+  ["https://cursor.com/dashboard", "wrong-path", "https://cursor.com/agents"],
+  ["https://x.com/i/grok", "ready", null],
+  ["https://example.com/", "unsupported", null],
+];
+for (const [url, state, open] of HINT_CASES) {
+  const hint = supportHint(url);
+  if (hint.state !== state || hint.open !== open) {
+    errors.push(`supportHint(${url}) => ${hint.state} ${hint.open}, expected ${state} ${open}`);
+  }
+}
+
 for (const manifest of ["manifests/chrome.json", "manifests/firefox.json"]) {
   const json = JSON.parse(read(manifest));
   if (json.version !== "1.1.0") errors.push(`${manifest}: version must be 1.1.0`);
@@ -109,8 +123,14 @@ for (const manifest of ["manifests/chrome.json", "manifests/firefox.json"]) {
   for (const host of REQUIRED_HOSTS) {
     if (!hosts.includes(host)) errors.push(`${manifest}: missing host_permissions ${host}`);
   }
-  for (const host of ["claude.ai", "chatgpt.com", "gemini.google.com", "grok.com", "x.com/i/grok", "github.com/copilot", "copilot.microsoft.com", "copilot.com", "cursor.com/agents", "myactivity.google.com", "x.com/settings"]) {
-    if (!matches.includes(host)) errors.push(`${manifest}: missing content_scripts ${host}`);
+  for (const pattern of ["https://claude.ai/*", "https://chatgpt.com/*", "https://gemini.google.com/*", "https://grok.com/*", "https://x.com/*", "https://github.com/*", "https://copilot.microsoft.com/*", "https://copilot.com/*", "https://cursor.com/*", "https://myactivity.google.com/*"]) {
+    if (!matches.includes(pattern)) errors.push(`${manifest}: missing content_scripts ${pattern}`);
+  }
+  for (const narrow of ["x.com/i/grok*", "github.com/copilot*", "cursor.com/agents*"]) {
+    if (matches.includes(narrow)) errors.push(`${manifest}: content script still path-narrow (${narrow})`);
+  }
+  if (!matches.includes("spa-hook.js")) {
+    errors.push(`${manifest}: missing MAIN-world spa-hook.js`);
   }
   for (const host of FORBIDDEN_HOSTS) {
     if (hosts.includes(host) || matches.includes(host)) {

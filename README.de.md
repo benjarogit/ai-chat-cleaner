@@ -43,10 +43,14 @@ Open-Source-Browser-Erweiterung (MIT). Löscht alle Unterhaltungen auf unterstü
 
 **Android:** Über AMO installieren oder `.xpi` sideloaden.
 
-### Chrome / Edge
+### Chrome / Edge / Brave
 
 1. [`acc-chrome.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) oder [`acc-edge.zip`](https://github.com/benjarogit/ai-chat-cleaner/releases/latest) herunterladen.
 2. Entpacken → `chrome://extensions` oder `edge://extensions` → **Entwicklermodus** → **Entpackte Erweiterung laden**.
+
+Brave nutzt den Chrome-Build (Chrome Web Store oder `acc-chrome.zip`). Shields können die Lösch-Requests der Seite blockieren; bei einem Fehler die Seite in Shields erlauben und erneut versuchen.
+
+Safari folgt später. Dafür braucht es einen Mac, Xcode und `xcrun safari-web-extension-converter dist/chrome`, danach die Signierung für den App Store. Safari verlangt zusätzlich eine Freigabe pro Website.
 
 ### Ohne Erweiterung (Bookmarklet / Konsole)
 
